@@ -16,7 +16,7 @@ folder_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_
 output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/out_of_scanner/qc/")
 
 # Initialize QC CSVs for all tasks
-initialize_qc_csvs(TASKS)
+initialize_qc_csvs(TASKS, output_path)
 
 for subject_folder in glob.glob(str(folder_path / "*")):
     subject_id = Path(subject_folder).name

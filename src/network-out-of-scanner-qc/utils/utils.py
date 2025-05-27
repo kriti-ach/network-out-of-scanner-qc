@@ -99,7 +99,6 @@ def get_task_metrics(df, task_name):
     Returns:
         dict: Dictionary containing task-specific metrics
     """
-    df = filter_to_test_trials(df, task_name)
     if 'directed_forgetting' in task_name and 'flanker' in task_name:
         return calculate_df_with_flanker_metrics(df, 'directed_forgetting', 'flanker')
     else:
