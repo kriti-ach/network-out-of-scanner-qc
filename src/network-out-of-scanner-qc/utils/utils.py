@@ -1,17 +1,27 @@
 import pandas as pd
+import os
 from pathlib import Path
 import re
+import numpy as np
+from .task_metrics import get_task_metrics
 
 from utils.globals import (
-    SINGLE_TASKS,
-    DUAL_TASKS
+    TASKS
 )
 
-def initialize_qc_csvs():
-    """Initialize QC CSV files for all tasks."""
-    for task in SINGLE_TASKS + DUAL_TASKS:
-        df = pd.DataFrame(columns=["subject_id", "task", "score"])
-        df.to_csv(f"{task}_qc.csv", index=False)
+def initialize_qc_csvs(tasks, output_path):
+    """
+    Initialize QC CSV files for all tasks.
+    
+    Args:
+        tasks (list): List of task names
+    """
+    for task in tasks:
+        # Get example metrics to determine columns
+        example_metrics = get_task_metrics(pd.DataFrame(), task)
+        columns = ['subject_id'] + list(example_metrics.keys())
+        df = pd.DataFrame(columns=columns)
+        df.to_csv(output_path / f"{task}_qc.csv", index=False)
 
 def extract_task_name(filename):
     """
@@ -28,22 +38,27 @@ def extract_task_name(filename):
         return match.group(1)
     return None
 
-def update_qc_csv(task_name, subject_id, score):
+def filter_to_test_trials(df, task_name):
+    """
+    Filter the dataframe to only include test trials.
+    """
+    return df[df['trial_id'] == 'test_trial']
+
+def update_qc_csv(output_path, task_name, subject_id, metrics):
     """
     Update the QC CSV file for a specific task with new data.
     
     Args:
         task_name (str): Name of the task
         subject_id (str): Subject ID
-        score (float): Score to be added
+        metrics (dict): Dictionary of metrics to add
     """
-    qc_file = f"{task_name}_qc.csv"
+    qc_file = output_path / f"{task_name}_qc.csv"
     try:
         df = pd.read_csv(qc_file)
         new_row = pd.DataFrame({
-            "subject_id": [subject_id],
-            "task": [task_name],
-            "score": [score]
+            'subject_id': [subject_id],
+            **metrics
         })
         df = pd.concat([df, new_row], ignore_index=True)
         df.to_csv(qc_file, index=False)

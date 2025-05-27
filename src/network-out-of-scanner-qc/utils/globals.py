@@ -1,16 +1,4 @@
-# Task names
-SINGLE_TASKS = [
-    "cued_task_switching_single_task_network",
-    "directed_forgetting_single_task_network",
-    "flanker_single_task_network",
-    "go_nogo_single_task_network",
-    "n_back_single_task_network",
-    "spatial_task_switching_single_task_network",
-    "shape_matching_single_task_network",
-    "stop_signal_single_task_network"
-]
-
-DUAL_TASKS = [
+TASKS = [
     "cued_task_switching_with_directed_forgetting",
     "directed_forgetting_with_flanker",
     "directed_forgetting_with_shape_matching",
