@@ -42,3 +42,5 @@ DUAL_TASKS = [
 
 FLANKER_CONDITIONS = ['congruent', 'incongruent']
 DIRECTED_FORGETTING_CONDITIONS = ['con', 'pos', 'neg']
+SPATIAL_TASK_SWITCHING_CONDITIONS = ['spatialtstaycstay', 'spatialtstaycswitch', 'spatialtswitchcswitch', 'spatialtswitchcstay']
+CUED_TASK_SWITCHING_CONDITIONS = ['cuedtstaycstay', 'cuedtstaycswitch', 'cuedtswitchcswitch', 'cuedtswitchcstay']

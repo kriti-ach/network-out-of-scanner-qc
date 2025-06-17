@@ -8,7 +8,9 @@ from utils.globals import (
     DUAL_TASKS,
     SINGLE_TASKS,
     FLANKER_CONDITIONS,
-    DIRECTED_FORGETTING_CONDITIONS
+    DIRECTED_FORGETTING_CONDITIONS,
+    SPATIAL_TASK_SWITCHING_CONDITIONS,
+    CUED_TASK_SWITCHING_CONDITIONS
 )
 
 def initialize_qc_csvs(tasks, output_path):
@@ -122,6 +124,30 @@ def get_task_metrics(df, task_name):
                 'directed_forgetting': 'directed_forgetting_condition',
                 'flanker': 'flanker_condition'
             }
+        elif 'spatial_task_switching' in task_name and 'cued_task_switching' in task_name:
+            conditions = {
+                'spatial_task_switching': SPATIAL_TASK_SWITCHING_CONDITIONS,
+                'cued_task_switching': CUED_TASK_SWITCHING_CONDITIONS
+            }
+            condition_columns = {
+                'spatial_task_switching': 'spatial_task_switching_condition',
+                'cued_task_switching': 'cued_task_switching_condition'
+            }
+        elif 'cued_task_switching' in task_name and 'spatial_task_switching' in task_name:
+            conditions = {
+                'cued_task_switching': CUED_TASK_SWITCHING_CONDITIONS,
+                'spatial_task_switching': SPATIAL_TASK_SWITCHING_CONDITIONS
+            }
+            condition_columns = {
+                'cued_task_switching': 'cued_task_switching_condition',
+                'spatial_task_switching': 'spatial_task_switching_condition'
+            }
+        elif 'spatial_task_switching' in task_name:
+            conditions = {'spatial_task_switching': SPATIAL_TASK_SWITCHING_CONDITIONS}
+            condition_columns = {'spatial_task_switching': 'spatial_task_switching_condition'}
+        elif 'cued_task_switching' in task_name:
+            conditions = {'cued_task_switching': CUED_TASK_SWITCHING_CONDITIONS}
+            condition_columns = {'cued_task_switching': 'cued_task_switching_condition'}
     else:
         # For single tasks, we only need one set of conditions
         if 'directed_forgetting' in task_name:
