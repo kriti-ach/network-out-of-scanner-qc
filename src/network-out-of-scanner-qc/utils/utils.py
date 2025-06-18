@@ -151,6 +151,15 @@ def update_qc_csv(output_path, task_name, subject_id, session, run, metrics):
             **metrics
         })
         df = pd.concat([df, new_row], ignore_index=True)
+        # add mean, std, max, and min of acc and rt
+        df['mean_acc'] = df.iloc[:, 4:].mean(axis=1)
+        df['std_acc'] = df.iloc[:, 4:].std(axis=1)
+        df['mean_rt'] = df.iloc[:, 4:].mean(axis=1)
+        df['std_rt'] = df.iloc[:, 4:].std(axis=1)
+        df['max_acc'] = df.iloc[:, 4:].max(axis=1)
+        df['min_acc'] = df.iloc[:, 4:].min(axis=1)
+        df['max_rt'] = df.iloc[:, 4:].max(axis=1)
+        df['min_rt'] = df.iloc[:, 4:].min(axis=1)
         df.to_csv(qc_file, index=False)
     except FileNotFoundError:
         print(f"Warning: QC file {qc_file} not found") 
