@@ -151,10 +151,6 @@ def update_qc_csv(output_path, task_name, subject_id, session, run, metrics):
             **metrics
         })
         df = pd.concat([df, new_row], ignore_index=True)
-        df.loc['mean'] = df.mean(numeric_only=True)
-        df.loc['std'] = df.std(numeric_only=True)
-        df.loc['max'] = df.max(numeric_only=True)
-        df.loc['min'] = df.min(numeric_only=True)
         df.to_csv(qc_file, index=False)
     except FileNotFoundError:
         print(f"Warning: QC file {qc_file} not found") 
@@ -251,3 +247,11 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task):
             metrics[f'{cond}_rt'] = df[mask_rt]['response_time'].mean()
     
     return metrics
+
+def append_summary_rows_to_csv(csv_path):
+    df = pd.read_csv(csv_path)
+    df.loc['mean'] = df.mean(numeric_only=True)
+    df.loc['std'] = df.std(numeric_only=True)
+    df.loc['max'] = df.max(numeric_only=True)
+    df.loc['min'] = df.min(numeric_only=True)
+    df.to_csv(csv_path, index=False)

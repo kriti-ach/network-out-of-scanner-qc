@@ -8,7 +8,8 @@ from utils.utils import (
     extract_task_name_out_of_scanner,
     extract_task_name_fmri,
     update_qc_csv,
-    get_task_metrics
+    get_task_metrics,
+    append_summary_rows_to_csv
 )
 
 from utils.globals import SINGLE_TASKS_FMRI, DUAL_TASKS_FMRI, SINGLE_TASKS_OUT_OF_SCANNER, DUAL_TASKS_OUT_OF_SCANNER
@@ -48,3 +49,6 @@ for subject_folder in glob.glob(str(folder_path / "sub-s*")):
                     update_qc_csv(output_path, task_name, subject_id, session, run, metrics)
                 except Exception as e:
                     print(f"Error processing {task_name} for subject {subject_id}: {str(e)}")
+
+for task in SINGLE_TASKS_FMRI + DUAL_TASKS_FMRI:
+    append_summary_rows_to_csv(output_path / f"{task}_qc.csv")
