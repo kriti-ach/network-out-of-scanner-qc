@@ -27,22 +27,22 @@ for subject_folder in glob.glob(str(folder_path / "sub-s*")):
 
         # for file in glob.glob(str(Path(subject_folder) / "*csv")):
         for file in glob.glob(str(Path(subject_folder) / "ses-*" / "func" / "*.tsv")):
-            session = Path(file).parent.name
-            run = Path(file).stem.split('_')[2]
+            session = Path(file).parent.parent.name
+            run = Path(file).stem.split('_')[3]
             filename = Path(file).name
             # task_name = extract_task_name_out_of_scanner(filename)
             task_name = extract_task_name_fmri(filename)
             print(f"Processing task: {task_name}")
             
             if task_name:
+                if task_name == 'CuedTS':
+                    print(file)
+                    print(session)
+                    print(run)
                 try:
                     # df = pd.read_csv(file)
                     df = pd.read_csv(file, sep='\t')
-                    if task_name == 'CuedTS':
-                        print(df.head())
                     metrics = get_task_metrics(df, task_name)
-                    if task_name == 'CuedTS':
-                        print(metrics)
                     update_qc_csv(output_path, task_name, subject_id, session, run, metrics)
                 except Exception as e:
                     print(f"Error processing {task_name} for subject {subject_id}: {str(e)}")
