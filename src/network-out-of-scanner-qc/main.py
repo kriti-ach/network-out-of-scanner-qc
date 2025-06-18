@@ -12,8 +12,8 @@ from utils.utils import (
 
 from utils.globals import SINGLE_TASKS, DUAL_TASKS
 
-folder_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/out_of_scanner/")
-output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/out_of_scanner/qc/")
+folder_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/network_fmri_raw_final_2/")
+output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/qc_by_task/")
 
 # Initialize QC CSVs for all tasks
 initialize_qc_csvs(SINGLE_TASKS + DUAL_TASKS, output_path)

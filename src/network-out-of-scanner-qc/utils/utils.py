@@ -127,7 +127,7 @@ def update_qc_csv(output_path, task_name, subject_id, metrics):
         metrics (dict): Dictionary of metrics to add
     """
     qc_file = output_path / f"{task_name}_qc.csv"
-    if task_name == 'cued_task_switching_with_spatial_task_switching':
+    if 'cued_task_switching' in task_name and 'spatial_task_switching' in task_name:
         create_cued_spatialts_csv(task_name, df, output_path)
         return
     try:
