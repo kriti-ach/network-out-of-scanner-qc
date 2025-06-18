@@ -22,7 +22,7 @@ initialize_qc_csvs(SINGLE_TASKS_FMRI + DUAL_TASKS_FMRI, output_path)
 for subject_folder in glob.glob(str(folder_path / "*")):
     subject_id = Path(subject_folder).name
     # if re.match(r"s\d{2,}", subject_id):
-    if re.match(r"sub-", subject_id):
+    if re.match(r"sub-s\d{2,}", subject_id):
         print(f"Processing Subject: {subject_id}")
 
         # for file in glob.glob(str(Path(subject_folder) / "*csv")):
