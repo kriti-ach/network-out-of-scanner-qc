@@ -20,9 +20,7 @@ output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_
 initialize_qc_csvs(SINGLE_TASKS_FMRI + DUAL_TASKS_FMRI, output_path)
 
 for subject_folder in glob.glob(str(folder_path / "sub-s*")):
-    print(subject_folder)
     subject_id = Path(subject_folder).name
-    print(subject_id)
     # if re.match(r"s\d{2,}", subject_id):
     if re.match(r"sub-s\d{2,}", subject_id):
         print(f"Processing Subject: {subject_id}")

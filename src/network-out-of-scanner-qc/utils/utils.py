@@ -45,8 +45,10 @@ def get_task_columns(task_name, sample_df=None):
                     ])
             return columns
         elif 'cued_task_switching' in task_name and 'spatial_task_switching' in task_name or 'cuedTS' in task_name and 'spatialTS' in task_name:
-            # Do not create columns at init; handled dynamically in main
-            return None
+            columns = ['subject_id']
+            for cond in SPATIAL_WITH_CUED_CONDITIONS:
+                columns.extend([f'{cond}_acc', f'{cond}_rt'])
+            return columns
     else:
         if 'spatial_task_switching' in task_name or 'spatialTS' in task_name:
             columns = ['subject_id']
@@ -140,9 +142,6 @@ def update_qc_csv(output_path, task_name, subject_id, metrics):
         metrics (dict): Dictionary of metrics to add
     """
     qc_file = output_path / f"{task_name}_qc.csv"
-    if 'cued_task_switching' in task_name and 'spatial_task_switching' in task_name or 'cuedTS' in task_name and 'spatialTS' in task_name:
-        create_cued_spatialts_csv(task_name, df, output_path)
-        return
     try:
         df = pd.read_csv(qc_file)
         new_row = pd.DataFrame({
@@ -249,11 +248,3 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task):
             metrics[f'{cond}_rt'] = df[mask_rt]['response_time'].mean()
     
     return metrics
-
-# Helper to create cued+spatialts CSV dynamically
-def create_cued_spatialts_csv(task_name, df, output_path):
-    contrasts = get_cued_spatialts_contrasts(df)
-    columns = ['subject_id']
-    for contrast in contrasts:
-        columns.extend([f'{contrast}_acc', f'{contrast}_rt'])
-    pd.DataFrame(columns=columns).to_csv(output_path / f"{task_name}_qc.csv", index=False)
