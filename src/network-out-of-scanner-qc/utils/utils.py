@@ -259,10 +259,10 @@ def append_summary_rows_to_csv(csv_path):
     # Only operate if there are at least 4 columns
     stats_cols = df.columns[3:]
     summary = {
-        'mean': [np.nan, np.nan, np.nan] + [df[col].mean() for col in stats_cols],
-        'std':  [np.nan, np.nan, np.nan] + [df[col].std() for col in stats_cols],
-        'max':  [np.nan, np.nan, np.nan] + [df[col].max() for col in stats_cols],
-        'min':  [np.nan, np.nan, np.nan] + [df[col].min() for col in stats_cols],
+        'mean': ['mean', np.nan, np.nan] + [df[col].mean() for col in stats_cols],
+        'std':  ['std', np.nan, np.nan] + [df[col].std() for col in stats_cols],
+        'max':  ['max', np.nan, np.nan] + [df[col].max() for col in stats_cols],
+        'min':  ['min', np.nan, np.nan] + [df[col].min() for col in stats_cols],
     }
     for stat, values in summary.items():
         row = pd.Series(values, index=df.columns, name=stat)
