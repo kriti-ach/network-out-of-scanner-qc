@@ -40,7 +40,7 @@ def extend_metric_columns(base_columns, conditions):
     Returns:
         list: Extended list of columns with _acc and _rt for each condition
     """
-    metric_types = ['acc', 'rt', 'commission_rate', 'omission_rate']
+    metric_types = ['acc', 'rt', 'omission_rate', 'commission_rate']
     return base_columns + [
         f'{cond}_{metric}' 
         for cond in conditions 
