@@ -228,7 +228,6 @@ def get_task_metrics(df, task_name):
         elif 'flanker' in task_name:
             conditions = {'flanker': FLANKER_CONDITIONS}
             condition_columns = {'flanker': 'flanker_condition'}
-            print(conditions, condition_columns)
         elif 'spatial_task_switching' in task_name or 'spatialTS' in task_name:
             conditions = {'spatial_task_switching': SPATIAL_TASK_SWITCHING_CONDITIONS}
             condition_columns = {'spatial_task_switching': 'trial_type'}
@@ -268,7 +267,6 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task):
     else:
         # For single tasks, just iterate through conditions
         task = list(conditions.keys())[0]
-        print(task, conditions[task])
         for cond in conditions[task]:
             mask_acc = (df[condition_columns[task]] == cond)
             mask_rt = (df[condition_columns[task]] == cond) & (df['correct_trial'] == 1)

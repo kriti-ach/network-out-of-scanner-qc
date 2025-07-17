@@ -43,6 +43,8 @@ for subject_folder in glob.glob(str(folder_path / "s*")):
                     df = pd.read_csv(file)
                     # df = pd.read_csv(file, sep='\t')
                     metrics = get_task_metrics(df, task_name)
+                    if 'flanker' in task_name:
+                        print(metrics)
                     update_qc_csv(output_path, task_name, subject_id, metrics)
                 except Exception as e:
                     print(f"Error processing {task_name} for subject {subject_id}: {str(e)}")
