@@ -13,7 +13,8 @@ from utils.globals import (
     DIRECTED_FORGETTING_CONDITIONS,
     SPATIAL_TASK_SWITCHING_CONDITIONS,
     CUED_TASK_SWITCHING_CONDITIONS,
-    SPATIAL_WITH_CUED_CONDITIONS
+    SPATIAL_WITH_CUED_CONDITIONS,
+    STOP_SIGNAL_CONDITIONS
 )
 
 def initialize_qc_csvs(tasks, output_path):
@@ -124,7 +125,7 @@ def filter_to_test_trials(df, task_name):
     """
     return df[df['trial_id'] == 'test_trial']
 
-def update_qc_csv(output_path, task_name, subject_id, session, run, metrics):
+def update_qc_csv(output_path, task_name, subject_id, metrics):
     """
     Update the QC CSV file for a specific task with new data.
     
@@ -139,8 +140,6 @@ def update_qc_csv(output_path, task_name, subject_id, session, run, metrics):
         df = pd.read_csv(qc_file)
         new_row = pd.DataFrame({
             'subject_id': [subject_id],
-            'session': [session],
-            'run': [run],
             **metrics
         })
         df = pd.concat([df, new_row], ignore_index=True)
@@ -179,14 +178,14 @@ def get_task_metrics(df, task_name):
             metrics = {}
             for cond in SPATIAL_WITH_CUED_CONDITIONS:
                 mask_acc = (df['task_switch'] == cond)
-                mask_rt = (df['task_switch'] == cond) & (df['acc'] == 1)
+                mask_rt = (df['task_switch'] == cond) & (df['correct_trial'] == 1)
                 mask_omission = (df['task_switch'] == cond) & (df['key_press'] == -1)
-                mask_commission = (df['task_switch'] == cond) & (df['key_press'] != -1) & (df['acc'] == 0)
+                mask_commission = (df['task_switch'] == cond) & (df['key_press'] != -1) & (df['correct_trial'] == 0)
                 num_omissions = len(df[mask_omission])
                 num_commissions = len(df[mask_commission])
                 total_num_trials = len(df[mask_acc])
-                metrics[f'{cond}_acc'] = df[mask_acc]['acc'].mean()
-                metrics[f'{cond}_rt'] = df[mask_rt]['response_time'].mean()
+                metrics[f'{cond}_acc'] = df[mask_acc]['correct_trial'].mean()
+                metrics[f'{cond}_rt'] = df[mask_rt]['rt'].mean()
                 metrics[f'{cond}_omission_rate'] = num_omissions / total_num_trials
                 metrics[f'{cond}_commission_rate'] = num_commissions / total_num_trials
             return metrics
@@ -199,28 +198,28 @@ def get_task_metrics(df, task_name):
                 for delay in df['delay'].unique():
                     condition = f"{trial_type}_{delay}back"
                     mask_acc = (df['trial_type'] == trial_type) & (df['delay'] == delay)
-                    mask_rt = mask_acc & (df['acc'] == 1)
-                    metrics[f'{condition}_acc'] = df[mask_acc]['acc'].mean()
-                    metrics[f'{condition}_rt'] = df[mask_rt]['response_time'].mean()
+                    mask_rt = mask_acc & (df['correct_trial'] == 1)
+                    metrics[f'{condition}_acc'] = df[mask_acc]['correct_trial'].mean()
+                    metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
             return metrics
             
         # Special handling for stop signal task
-        # elif 'stop_signal' in task_name:
-        #     metrics = {}
-        #     # Calculate metrics for each condition
-        #     for condition in STOP_SIGNAL_CONDITIONS:
-        #         mask_acc = (df['trial_type'] == condition)
-        #         mask_rt = mask_acc & (df['acc'] == 1)
-        #         metrics[f'{condition}_acc'] = df[mask_acc]['acc'].mean()
-        #         metrics[f'{condition}_rt'] = df[mask_rt]['response_time'].mean()
-        #         # Add count for stop trials
-        #         if condition in ['stop_success', 'stop_failure']:
-        #             metrics[f'{condition}_count'] = len(df[mask_acc])
+        elif 'stop_signal' in task_name:
+            metrics = {}
+            # Calculate metrics for each condition
+            for condition in STOP_SIGNAL_CONDITIONS:
+                mask_acc = (df['trial_type'] == condition)
+                mask_rt = mask_acc & (df['correct_trial'] == 1)
+                metrics[f'{condition}_acc'] = df[mask_acc]['correct_trial'].mean()
+                metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
+                # Add count for stop trials
+                if condition in ['stop_success', 'stop_failure']:
+                    metrics[f'{condition}_count'] = len(df[mask_acc])
             
-        #     # Add SS_delay statistics
-        #     metrics['mean_SSD'] = df[df['SS_delay'].notna()]['SS_delay'].mean()
-        #     metrics['std_SSD'] = df[df['SS_delay'].notna()]['SS_delay'].std()
-        #     return metrics
+            # Add SS_delay statistics
+            metrics['mean_SSD'] = df[df['SS_delay'].notna()]['SS_delay'].mean()
+            metrics['std_SSD'] = df[df['SS_delay'].notna()]['SS_delay'].std()
+            return metrics
             
         # For other single tasks, we only need one set of conditions
         elif 'directed_forgetting' in task_name or 'directedForgetting' in task_name:
