@@ -54,7 +54,7 @@ def get_task_columns(task_name, sample_df=None):
     """
     Define columns for each task's QC CSV.
     """
-    base_columns = ['subject_id', 'session', 'run']
+    base_columns = ['subject_id']
     
     if is_dual_task(task_name):
         if 'directed_forgetting' in task_name and 'flanker' in task_name or 'directedForgetting' in task_name and 'flanker' in task_name:
@@ -81,8 +81,8 @@ def get_task_columns(task_name, sample_df=None):
             # For n-back, we need to get the columns from the data
             if sample_df is not None:
                 conditions = [
-                    f"{trial_type}_{delay}back"
-                    for trial_type in sample_df['trial_type'].unique()
+                    f"{n_back_condition}_{delay}back"
+                    for n_back_condition in sample_df['n_back_condition'].unique()
                     for delay in sample_df['delay'].unique()
                 ]
                 return extend_metric_columns(base_columns, conditions)
@@ -224,33 +224,52 @@ def get_task_metrics(df, task_name):
         # Special handling for n-back task
         if 'n_back' in task_name:
             metrics = {}
-            # Get unique combinations of trial_type and delay
-            for trial_type in df['trial_type'].unique():
+            # Get unique combinations of n_back_condition and delay
+            for n_back_condition in df['n_back_condition'].unique():
                 for delay in df['delay'].unique():
-                    condition = f"{trial_type}_{delay}back"
-                    mask_acc = (df['trial_type'] == trial_type) & (df['delay'] == delay)
+                    condition = f"{n_back_condition}_{delay}back"
+                    mask_acc = (df['n_back_condition'] == n_back_condition) & (df['delay'] == delay)
                     mask_rt = mask_acc & (df['correct_trial'] == 1)
                     metrics[f'{condition}_acc'] = df[mask_acc]['correct_trial'].mean()
                     metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
             return metrics
-            
-        # Special handling for stop signal task
-        elif 'stop_signal' in task_name:
+
+        elif 'cued_task_switching' in task_name or 'spatial_task_switching' in task_name:
             metrics = {}
-            # Calculate metrics for each condition
-            for condition in STOP_SIGNAL_CONDITIONS:
-                mask_acc = (df['trial_type'] == condition)
-                mask_rt = mask_acc & (df['correct_trial'] == 1)
-                metrics[f'{condition}_acc'] = df[mask_acc]['correct_trial'].mean()
-                metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
-                # Add count for stop trials
-                if condition in ['stop_success', 'stop_failure']:
-                    metrics[f'{condition}_count'] = len(df[mask_acc])
-            
-            # Add SS_delay statistics
-            metrics['mean_SSD'] = df[df['SS_delay'].notna()]['SS_delay'].mean()
-            metrics['std_SSD'] = df[df['SS_delay'].notna()]['SS_delay'].std()
+            for cue_condition in df['cue_condition'].unique():
+                for task_condition in df['task_condition'].unique():
+                    condition = f"t{task_condition}_c{cue_condition}"
+                    mask_acc = (df['cue_condition'] == cue_condition) & (df['task_condition'] == task_condition)
+                    mask_rt = mask_acc & (df['correct_trial'] == 1)
+                    mask_omission = mask_acc & (df['key_press'] == -1)
+                    mask_commission = mask_acc & (df['key_press'] != -1) & (df['correct_trial'] == 0)
+                    num_omissions = len(df[mask_omission])
+                    num_commissions = len(df[mask_commission])
+                    total_num_trials = len(df[mask_acc])
+                    metrics[f'{condition}_acc'] = df[mask_acc]['correct_trial'].mean()
+                    metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
+                    metrics[f'{condition}_omission_rate'] = num_omissions / total_num_trials
+                    metrics[f'{condition}_commission_rate'] = num_commissions / total_num_trials
             return metrics
+    
+
+        # Special handling for stop signal task
+        # elif 'stop_signal' in task_name:
+        #     metrics = {}
+        #     # Calculate metrics for each condition
+        #     for condition in STOP_SIGNAL_CONDITIONS:
+        #         mask_acc = (df['trial_type'] == condition)
+        #         mask_rt = mask_acc & (df['correct_trial'] == 1)
+        #         metrics[f'{condition}_acc'] = df[mask_acc]['correct_trial'].mean()
+        #         metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
+        #         # Add count for stop trials
+        #         if condition in ['stop_success', 'stop_failure']:
+        #             metrics[f'{condition}_count'] = len(df[mask_acc])
+            
+        #     # Add SS_delay statistics
+        #     metrics['mean_SSD'] = df[df['SS_delay'].notna()]['SS_delay'].mean()
+        #     metrics['std_SSD'] = df[df['SS_delay'].notna()]['SS_delay'].std()
+        #     return metrics
             
         # For other single tasks, we only need one set of conditions
         elif 'directed_forgetting' in task_name or 'directedForgetting' in task_name:
@@ -259,12 +278,12 @@ def get_task_metrics(df, task_name):
         elif 'flanker' in task_name:
             conditions = {'flanker': FLANKER_CONDITIONS}
             condition_columns = {'flanker': 'flanker_condition'}
-        elif 'spatial_task_switching' in task_name or 'spatialTS' in task_name:
-            conditions = {'spatial_task_switching': SPATIAL_TASK_SWITCHING_CONDITIONS}
-            condition_columns = {'spatial_task_switching': 'trial_type'}
-        elif 'cued_task_switching' in task_name or 'cuedTS' in task_name:
-            conditions = {'cued_task_switching': CUED_TASK_SWITCHING_CONDITIONS}
-            condition_columns = {'cued_task_switching': 'trial_type'}
+        # elif 'spatial_task_switching' in task_name or 'spatialTS' in task_name:
+        #     conditions = {'spatial_task_switching': SPATIAL_TASK_SWITCHING_CONDITIONS}
+        #     condition_columns = {'spatial_task_switching': 'trial_type'}
+        # elif 'cued_task_switching' in task_name or 'cuedTS' in task_name:
+        #     conditions = {'cued_task_switching': CUED_TASK_SWITCHING_CONDITIONS}
+        #     condition_columns = {'cued_task_switching': 'trial_type'}
         elif 'go_nogo' in task_name:    
             conditions = {'go_nogo': GO_NOGO_CONDITIONS}
             condition_columns = {'go_nogo': 'go_nogo_condition'}
