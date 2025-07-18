@@ -88,15 +88,20 @@ def get_task_columns(task_name, sample_df=None):
                 return extend_metric_columns(base_columns, conditions)
             return base_columns  # Return base columns if no sample data available
         elif 'stop_signal' in task_name:
-            # For stop signal, add the standard metrics plus additional columns
-            columns = extend_metric_columns(base_columns, STOP_SIGNAL_CONDITIONS)
-            # Add count columns for stop trials
-            columns.extend([
-                'stop_success_count',
-                'stop_failure_count',
-                'mean_SSD',
-                'std_SSD'
-            ])
+            columns = [
+                'subject_id',
+                'go_rt',
+                'stop_fail_rt',
+                'go_acc',
+                'stop_failure_acc',
+                'stop_success',
+                'avg_ssd',
+                'min_ssd',
+                'max_ssd',
+                'min_ssd_count',
+                'max_ssd_count',
+                'ssrt'
+            ]
             return columns
         elif 'go_nogo' in task_name:
             return extend_metric_columns(base_columns, GO_NOGO_CONDITIONS)
@@ -258,23 +263,36 @@ def get_task_metrics(df, task_name):
     
 
         # Special handling for stop signal task
-        # elif 'stop_signal' in task_name:
-        #     metrics = {}
-        #     # Calculate metrics for each condition
-        #     for condition in STOP_SIGNAL_CONDITIONS:
-        #         mask_acc = (df['trial_type'] == condition)
-        #         mask_rt = mask_acc & (df['correct_trial'] == 1)
-        #         metrics[f'{condition}_acc'] = df[mask_acc]['correct_trial'].mean()
-        #         metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
-        #         # Add count for stop trials
-        #         if condition in ['stop_success', 'stop_failure']:
-        #             metrics[f'{condition}_count'] = len(df[mask_acc])
-            
-        #     # Add SS_delay statistics
-        #     metrics['mean_SSD'] = df[df['SS_delay'].notna()]['SS_delay'].mean()
-        #     metrics['std_SSD'] = df[df['SS_delay'].notna()]['SS_delay'].std()
-        #     return metrics
-            
+        elif 'stop_signal' in task_name:
+            metrics = {}
+            # Use your column names
+            go_mask = (df['SS_trial_type'] == 'go')
+            stop_mask = (df['SS_trial_type'] == 'stop')
+            stop_fail_mask = stop_mask & (df['correct_trial'] == 0)
+            stop_succ_mask = stop_mask & (df['correct_trial'] == 1)
+
+            # RTs
+            metrics['go_rt'] = df.loc[go_mask & (df['rt'].notna()), 'rt'].mean()
+            metrics['stop_fail_rt'] = df.loc[stop_fail_mask & (df['rt'].notna()), 'rt'].mean()
+
+            # Accuracies
+            metrics['go_acc'] = df.loc[go_mask, 'correct_trial'].mean()
+            metrics['stop_failure_acc'] = df.loc[stop_fail_mask, 'correct_trial'].mean()  # This will be 0 by definition
+            metrics['stop_success'] = stop_succ_mask.sum()
+
+            # SSD stats
+            ssd_vals = df.loc[stop_mask, 'SS_delay'].dropna()
+            metrics['avg_ssd'] = ssd_vals.mean()
+            metrics['min_ssd'] = ssd_vals.min()
+            metrics['max_ssd'] = ssd_vals.max()
+            metrics['min_ssd_count'] = (ssd_vals == metrics['min_ssd']).sum() if not np.isnan(metrics['min_ssd']) else 0
+            metrics['max_ssd_count'] = (ssd_vals == metrics['max_ssd']).sum() if not np.isnan(metrics['max_ssd']) else 0
+
+            # SSRT
+            metrics['ssrt'] = compute_SSRT(df)
+
+            return metrics
+
         # For other single tasks, we only need one set of conditions
         elif 'directed_forgetting' in task_name or 'directedForgetting' in task_name:
             conditions = {'directed_forgetting': DIRECTED_FORGETTING_CONDITIONS}
@@ -369,3 +387,35 @@ def append_summary_rows_to_csv(csv_path):
     for stat, values in summary.items():
         df.loc[len(df)] = values
     df.to_csv(csv_path, index=False)
+
+def compute_SSRT(df, max_go_rt=2):
+    # Only use test phase if present
+    if 'Phase' in df.columns:
+        df = df.query('Phase == "test"')
+    go_trials = df[df['SS_trial_type'] == 'go']
+    stop_df = df[df['SS_trial_type'] == 'stop']
+
+    go_replacement_df = go_trials.copy()
+    go_replacement_df['rt'] = go_replacement_df['rt'].fillna(max_go_rt)
+    sorted_go = go_replacement_df['rt'].sort_values(ascending=True, ignore_index=True)
+    stop_failure = stop_df[stop_df['rt'].notna()]
+    if len(stop_df) > 0:
+        p_respond = len(stop_failure) / len(stop_df)
+        avg_SSD = stop_df['SS_delay'].mean()
+    else:
+        return np.nan
+
+    nth_index = int(np.rint(p_respond * len(sorted_go))) - 1
+    if nth_index < 0:
+        nth_RT = sorted_go.iloc[0]
+    elif nth_index >= len(sorted_go):
+        nth_RT = sorted_go.iloc[-1]
+    else:
+        nth_RT = sorted_go.iloc[nth_index]
+
+    if avg_SSD is not None and not np.isnan(avg_SSD):
+        SSRT = nth_RT - avg_SSD
+    else:
+        SSRT = np.nan
+
+    return SSRT
