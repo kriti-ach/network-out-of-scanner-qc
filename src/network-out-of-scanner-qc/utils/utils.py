@@ -277,8 +277,23 @@ def get_task_metrics(df, task_name):
 
             # Accuracies
             metrics['go_acc'] = df.loc[go_mask, 'correct_trial'].mean()
-            metrics['stop_failure_acc'] = df.loc[stop_fail_mask, 'correct_trial'].mean()  # This will be 0 by definition
-            metrics['stop_success'] = stop_succ_mask.sum()
+            # 1. Learn mapping from go trials
+            go_trials = df[go_mask]
+            stim_to_resp = (
+                go_trials.groupby('stim')['correct_response']
+                .agg(lambda x: x.value_counts().idxmax())
+                .to_dict()
+            )
+
+            # 2. For stop-failure trials with a response
+            stop_fail_with_resp = df[stop_fail_mask & (df['key_press'] != -1)]
+            if not stop_fail_with_resp.empty:
+                stop_fail_with_resp = stop_fail_with_resp.copy()
+                stop_fail_with_resp['expected_response'] = stop_fail_with_resp['stim'].map(stim_to_resp)
+                stop_fail_with_resp['is_correct'] = stop_fail_with_resp['key_press'] == stop_fail_with_resp['expected_response']
+                metrics['stop_failure_acc'] = stop_fail_with_resp['is_correct'].mean()
+            else:
+                metrics['stop_failure_acc'] = np.nan
 
             # SSD stats
             ssd_vals = df.loc[stop_mask, 'SS_delay'].dropna()
