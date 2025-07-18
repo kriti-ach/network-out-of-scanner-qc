@@ -226,13 +226,16 @@ def get_task_metrics(df, task_name):
             metrics = {}
             # Get unique combinations of n_back_condition and delay
             for n_back_condition in df['n_back_condition'].unique():
-                if n_back_condition != np.nan:
-                    for delay in df['delay'].unique():
-                        condition = f"{n_back_condition}_{delay}back"   
-                        mask_acc = (df['n_back_condition'] == n_back_condition) & (df['delay'] == delay)
-                        mask_rt = mask_acc & (df['correct_trial'] == 1)
-                        metrics[f'{condition}_acc'] = df[mask_acc]['correct_trial'].mean()
-                        metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
+                if pd.isna(n_back_condition):
+                    continue
+                for delay in df['delay'].unique():
+                    if pd.isna(delay):
+                        continue
+                    condition = f"{n_back_condition}_{delay}back"   
+                    mask_acc = (df['n_back_condition'] == n_back_condition) & (df['delay'] == delay)
+                    mask_rt = mask_acc & (df['correct_trial'] == 1)
+                    metrics[f'{condition}_acc'] = df[mask_acc]['correct_trial'].mean()
+                    metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
             return metrics
 
         elif 'cued_task_switching' in task_name:
@@ -282,9 +285,6 @@ def get_task_metrics(df, task_name):
         elif 'spatial_task_switching' in task_name or 'spatialTS' in task_name:
             conditions = {'spatial_task_switching': SPATIAL_TASK_SWITCHING_CONDITIONS}
             condition_columns = {'spatial_task_switching': 'task_switch'}
-        # elif 'cued_task_switching' in task_name or 'cuedTS' in task_name:
-        #     conditions = {'cued_task_switching': CUED_TASK_SWITCHING_CONDITIONS}
-        #     condition_columns = {'cued_task_switching': 'trial_type'}
         elif 'go_nogo' in task_name:    
             conditions = {'go_nogo': GO_NOGO_CONDITIONS}
             condition_columns = {'go_nogo': 'go_nogo_condition'}
@@ -333,22 +333,25 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task):
     return metrics
 
 def append_summary_rows_to_csv(csv_path):
-    # Skip if file is empty or has no columns
     try:
         df = pd.read_csv(csv_path)
     except pd.errors.EmptyDataError:
         return
-    if df.empty or len(df.columns) < 4:
+    if df.empty or len(df.columns) < 2:
         return
-    # Only operate if there are at least 4 columns
-    stats_cols = df.columns[3:]
-    summary = {
-        'mean': ['mean'] + [df[col].mean() for col in stats_cols],
-        'std':  ['std'] + [df[col].std() for col in stats_cols],
-        'max':  ['max'] + [df[col].max() for col in stats_cols],
-        'min':  ['min'] + [df[col].min() for col in stats_cols],
-    }
+
+    stats_cols = df.columns[1:]  # Assuming first column is subject_id
+    summary = {}
+    for stat, func in zip(['mean', 'std', 'max', 'min'], [np.mean, np.std, np.max, np.min]):
+        row = []
+        for col in df.columns:
+            if col in stats_cols:
+                val = func(df[col]) if pd.api.types.is_numeric_dtype(df[col]) else np.nan
+                row.append(val)
+            else:
+                row.append(stat)
+        summary[stat] = row
+
     for stat, values in summary.items():
-        row = pd.Series(values, index=df.columns, name=stat)
-        df = pd.concat([df, row.to_frame().T], ignore_index=True)
+        df.loc[len(df)] = values
     df.to_csv(csv_path, index=False)
