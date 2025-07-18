@@ -115,8 +115,8 @@ def is_dual_task(task_name):
     """
     Check if the task is a dual task.
     """
-    # return any(task in task_name for task in DUAL_TASKS_OUT_OF_SCANNER)
-    return any(task in task_name for task in DUAL_TASKS_FMRI)
+    return any(task in task_name for task in DUAL_TASKS_OUT_OF_SCANNER)
+    # return any(task in task_name for task in DUAL_TASKS_FMRI)
 
 def extract_task_name_out_of_scanner(filename):
     """
@@ -162,18 +162,13 @@ def filter_to_test_trials(df, task_name):
     return df[df['trial_id'] == 'test_trial']
 
 def update_qc_csv(output_path, task_name, subject_id, metrics):
-    """
-    Update the QC CSV file for a specific task with new data.
-    
-    Args:
-        output_path (Path): Path to save QC CSVs
-        task_name (str): Name of the task
-        subject_id (str): Subject ID
-        metrics (dict): Dictionary of metrics to add
-    """
     qc_file = output_path / f"{task_name}_qc.csv"
     try:
         df = pd.read_csv(qc_file)
+        # Add any new columns from metrics that aren't in the DataFrame
+        for key in metrics.keys():
+            if key not in df.columns:
+                df[key] = np.nan
         new_row = pd.DataFrame({
             'subject_id': [subject_id],
             **metrics
@@ -181,7 +176,7 @@ def update_qc_csv(output_path, task_name, subject_id, metrics):
         df = pd.concat([df, new_row], ignore_index=True)
         df.to_csv(qc_file, index=False)
     except FileNotFoundError:
-        print(f"Warning: QC file {qc_file} not found") 
+        print(f"Warning: QC file {qc_file} not found")
 
 def get_task_metrics(df, task_name):
     """
