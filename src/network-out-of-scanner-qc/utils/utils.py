@@ -321,6 +321,13 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task):
                 mask_rt = (df[condition_columns[task1]] == cond1) & (df[condition_columns[task2]] == cond2) & (df['correct_trial'] == 1)
                 metrics[f'{cond1}_{cond2}_acc'] = df[mask_acc]['correct_trial'].mean()
                 metrics[f'{cond1}_{cond2}_rt'] = df[mask_rt]['rt'].mean()
+                mask_omission = (df[condition_columns[task1]] == cond1) & (df[condition_columns[task2]] == cond2) & (df['key_press'] == -1)
+                mask_commission = (df[condition_columns[task1]] == cond1) & (df[condition_columns[task2]] == cond2) & (df['key_press'] != -1) & (df['correct_trial'] == 0)
+                num_omissions = len(df[mask_omission])
+                num_commissions = len(df[mask_commission])
+                total_num_trials = len(df[mask_acc])
+                metrics[f'{cond1}_{cond2}_omission_rate'] = num_omissions / total_num_trials
+                metrics[f'{cond1}_{cond2}_commission_rate'] = num_commissions / total_num_trials
     else:
         # For single tasks, just iterate through conditions
         task = list(conditions.keys())[0]
@@ -329,6 +336,13 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task):
             mask_rt = (df[condition_columns[task]] == cond) & (df['correct_trial'] == 1)
             metrics[f'{cond}_acc'] = df[mask_acc]['correct_trial'].mean()
             metrics[f'{cond}_rt'] = df[mask_rt]['rt'].mean()
+            mask_omission = (df[condition_columns[task]] == cond) & (df['key_press'] == -1)
+            mask_commission = (df[condition_columns[task]] == cond) & (df['key_press'] != -1) & (df['correct_trial'] == 0)
+            num_omissions = len(df[mask_omission])
+            num_commissions = len(df[mask_commission])
+            total_num_trials = len(df[mask_acc])
+            metrics[f'{cond}_omission_rate'] = num_omissions / total_num_trials
+            metrics[f'{cond}_commission_rate'] = num_commissions / total_num_trials
     
     return metrics
 
