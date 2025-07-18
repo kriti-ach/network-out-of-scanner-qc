@@ -79,11 +79,25 @@ def get_task_columns(task_name, sample_df=None):
                 for s_cond in SHAPE_MATCHING_CONDITIONS
             ]
             return extend_metric_columns(base_columns, conditions)
-        elif 'directed_forgetting' in task_name and 'spatial_task_switching' in task_name:
+        elif 'directed_forgetting' in task_name and 'go_nogo' in task_name:
             conditions = [
-                f'{df_cond}_{t_cond}'
+                f'{df_cond}_{g_cond}'
                 for df_cond in DIRECTED_FORGETTING_CONDITIONS
-                for t_cond in SPATIAL_TASK_SWITCHING_CONDITIONS
+                for g_cond in GO_NOGO_CONDITIONS
+            ]
+            return extend_metric_columns(base_columns, conditions)
+        elif 'flanker' in task_name and 'go_nogo' in task_name:
+            conditions = [
+                f'{f_cond}_{g_cond}'
+                for f_cond in FLANKER_CONDITIONS
+                for g_cond in GO_NOGO_CONDITIONS
+            ]
+            return extend_metric_columns(base_columns, conditions)
+        elif 'go_nogo' in task_name and 'shape_matching' in task_name:
+            conditions = [
+                f'{g_cond}_{s_cond}'
+                for g_cond in GO_NOGO_CONDITIONS
+                for s_cond in SHAPE_MATCHING_CONDITIONS
             ]
             return extend_metric_columns(base_columns, conditions)
         elif 'cued_task_switching' in task_name and 'spatial_task_switching' in task_name or 'CuedTS' in task_name and 'spatialTS' in task_name:
@@ -226,6 +240,28 @@ def get_task_metrics(df, task_name):
             }
             return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name))
         
+        elif ('directed_forgetting' in task_name and 'go_nogo' in task_name) or ('directedForgetting' in task_name and 'go_nogo' in task_name):
+            conditions = {
+                'directed_forgetting': DIRECTED_FORGETTING_CONDITIONS,
+                'go_nogo': GO_NOGO_CONDITIONS
+            }
+            condition_columns = {
+                'directed_forgetting': 'directed_forgetting_condition',
+                'go_nogo': 'go_nogo_condition'
+            }
+            return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name))
+        
+        elif ('flanker' in task_name and 'go_nogo' in task_name) or ('flanker' in task_name and 'go_nogo' in task_name):
+            conditions = {
+                'flanker': FLANKER_CONDITIONS,
+                'go_nogo': GO_NOGO_CONDITIONS
+            }
+            condition_columns = {
+                'flanker': 'flanker_condition',
+                'go_nogo': 'go_nogo_condition'
+            }
+            return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name))
+        
         elif ('directed_forgetting' in task_name and 'shape_matching' in task_name) or ('directedForgetting' in task_name and 'shape_matching' in task_name):
             conditions = {
                 'directed_forgetting': DIRECTED_FORGETTING_CONDITIONS,
@@ -233,6 +269,17 @@ def get_task_metrics(df, task_name):
             }
             condition_columns = {
                 'directed_forgetting': 'directed_forgetting_condition',
+                'shape_matching': 'shape_matching_condition'
+            }
+            return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name))
+        
+        elif ('go_nogo' in task_name and 'shape_matching' in task_name) or ('go_nogo' in task_name and 'shape_matching' in task_name):
+            conditions = {
+                'go_nogo': GO_NOGO_CONDITIONS,
+                'shape_matching': SHAPE_MATCHING_CONDITIONS
+            }
+            condition_columns = {
+                'go_nogo': 'go_nogo_condition',
                 'shape_matching': 'shape_matching_condition'
             }
             return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name))
@@ -248,16 +295,6 @@ def get_task_metrics(df, task_name):
             }
             return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name))
         
-        elif ('directed_forgetting' in task_name and 'spatial_task_switching' in task_name) or ('directedForgetting' in task_name and 'spatial_task_switching' in task_name):
-            conditions = {
-                'directed_forgetting': DIRECTED_FORGETTING_CONDITIONS,
-                'spatial_task_switching': SPATIAL_TASK_SWITCHING_CONDITIONS
-            }
-            condition_columns = {
-                'directed_forgetting': 'directed_forgetting_condition',
-                'spatial_task_switching': 'task_switch'
-            }
-            return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name))
         elif ('cued_task_switching' in task_name and 'spatial_task_switching' in task_name) or ('CuedTS' in task_name and 'spatialTS' in task_name):
             metrics = {}
             for cond in SPATIAL_WITH_CUED_CONDITIONS:
@@ -410,12 +447,8 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task):
                 num_omissions = len(df[mask_omission])
                 num_commissions = len(df[mask_commission])
                 total_num_trials = len(df[mask_acc])
-                if total_num_trials > 0:
-                    metrics[f'{cond1}_{cond2}_omission_rate'] = num_omissions / total_num_trials
-                    metrics[f'{cond1}_{cond2}_commission_rate'] = num_commissions / total_num_trials
-                else:
-                    metrics[f'{cond1}_{cond2}_omission_rate'] = np.nan
-                    metrics[f'{cond1}_{cond2}_commission_rate'] = np.nan
+                metrics[f'{cond1}_{cond2}_omission_rate'] = num_omissions / total_num_trials
+                metrics[f'{cond1}_{cond2}_commission_rate'] = num_commissions / total_num_trials
     else:
         # For single tasks, just iterate through conditions
         task = list(conditions.keys())[0]
