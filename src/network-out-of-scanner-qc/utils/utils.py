@@ -492,6 +492,7 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task):
 def append_summary_rows_to_csv(csv_path):
     try:
         df = pd.read_csv(csv_path)
+        print(df.head())
     except pd.errors.EmptyDataError:
         return
     if df.empty or len(df.columns) < 2:
