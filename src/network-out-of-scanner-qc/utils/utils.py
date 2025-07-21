@@ -310,6 +310,29 @@ def get_task_metrics(df, task_name):
                 metrics[f'{cond}_omission_rate'] = num_omissions / total_num_trials
                 metrics[f'{cond}_commission_rate'] = num_commissions / total_num_trials
             return metrics
+        
+        elif ('flanker' in task_name and 'cued_task_switching' in task_name) or ('flanker' in task_name and 'CuedTS' in task_name):
+            metrics = {}
+            cue_conditions = [c for c in df['cue_condition'].unique() if pd.notna(c) and str(c).lower() != 'na']
+            task_conditions = [t for t in df['task_condition'].unique() if pd.notna(t) and str(t).lower() != 'na']
+            for flanker in FLANKER_CONDITIONS:
+                for cue in cue_conditions:
+                    for taskc in task_conditions:
+                        mask_acc = df['flanker_condition'].str.contains(flanker, case=False, na=False) & \
+                                   (df['cue_condition'] == cue) & (df['task_condition'] == taskc)
+                        mask_rt = mask_acc & (df['correct_trial'] == 1)
+                        mask_omission = mask_acc & (df['key_press'] == -1)
+                        mask_commission = mask_acc & (df['key_press'] != -1) & (df['correct_trial'] == 0)
+                        num_omissions = len(df[mask_omission])
+                        num_commissions = len(df[mask_commission])
+                        total_num_trials = len(df[mask_acc])
+                        col_prefix = f"f{flanker}_t{taskc}_c{cue}"
+                        metrics[f'{col_prefix}_acc'] = df[mask_acc]['correct_trial'].mean()
+                        metrics[f'{col_prefix}_rt'] = df[mask_rt]['rt'].mean()
+                        metrics[f'{col_prefix}_omission_rate'] = num_omissions / total_num_trials if total_num_trials > 0 else np.nan
+                        metrics[f'{col_prefix}_commission_rate'] = num_commissions / total_num_trials if total_num_trials > 0 else np.nan
+            return metrics
+        
     else:
         # Special handling for n-back task
         if 'n_back' in task_name:
@@ -328,26 +351,6 @@ def get_task_metrics(df, task_name):
                     metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
             return metrics
 
-        elif 'cued_task_switching' in task_name:
-            metrics = {}
-            cue_conditions = [c for c in df['cue_condition'].unique() if pd.notna(c) and str(c).lower() != 'na']
-            task_conditions = [t for t in df['task_condition'].unique() if pd.notna(t) and str(t).lower() != 'na']
-            for cue_condition in cue_conditions:
-                for task_condition in task_conditions:
-                    condition = f"t{task_condition}_c{cue_condition}"
-                    mask_acc = (df['cue_condition'] == cue_condition) & (df['task_condition'] == task_condition)
-                    mask_rt = mask_acc & (df['correct_trial'] == 1)
-                    mask_omission = mask_acc & (df['key_press'] == -1)
-                    mask_commission = mask_acc & (df['key_press'] != -1) & (df['correct_trial'] == 0)
-                    num_omissions = len(df[mask_omission])
-                    num_commissions = len(df[mask_commission])
-                    total_num_trials = len(df[mask_acc])
-                    metrics[f'{condition}_acc'] = df[mask_acc]['correct_trial'].mean()
-                    metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
-                    metrics[f'{condition}_omission_rate'] = num_omissions / total_num_trials if total_num_trials > 0 else np.nan
-                    metrics[f'{condition}_commission_rate'] = num_commissions / total_num_trials if total_num_trials > 0 else np.nan
-            return metrics
-    
 
         # Special handling for stop signal task
         elif 'stop_signal' in task_name:
@@ -438,25 +441,16 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task):
         task1, task2 = list(conditions.keys())
         for cond1 in conditions[task1]:
             for cond2 in conditions[task2]:
-                print(f'cond1: {cond1}')
-                print(f'cond2: {cond2}')
-                print(f'condition_columns[task1]: {condition_columns[task1]}')
-                print(f'condition_columns[task2]: {condition_columns[task2]}')
                 mask_acc = df[condition_columns[task1]].str.contains(cond1, case=False, na=False) & \
                            df[condition_columns[task2]].str.contains(cond2, case=False, na=False)
-                print(f'mask_acc: {mask_acc}')
                 mask_rt = mask_acc & (df['correct_trial'] == 1)
-                print(f'mask_rt: {mask_rt}')
                 metrics[f'{cond1}_{cond2}_acc'] = df[mask_acc]['correct_trial'].mean()
                 metrics[f'{cond1}_{cond2}_rt'] = df[mask_rt]['rt'].mean()
                 mask_omission = mask_acc & (df['key_press'] == -1)
-                print(f'mask_omission: {mask_omission}')
                 mask_commission = mask_acc & (df['key_press'] != -1) & (df['correct_trial'] == 0)
-                print(f'mask_commission: {mask_commission}')
                 num_omissions = len(df[mask_omission])
                 num_commissions = len(df[mask_commission])
                 total_num_trials = len(df[mask_acc])
-                print(f'total_num_trials: {total_num_trials}')
                 metrics[f'{cond1}_{cond2}_omission_rate'] = num_omissions / total_num_trials
                 metrics[f'{cond1}_{cond2}_commission_rate'] = num_commissions / total_num_trials
     else:
