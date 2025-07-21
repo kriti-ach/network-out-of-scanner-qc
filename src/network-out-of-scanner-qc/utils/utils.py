@@ -351,7 +351,25 @@ def get_task_metrics(df, task_name):
                     metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
             return metrics
 
-
+        elif 'cued_task_switching' in task_name:
+            metrics = {}
+            cue_conditions = [c for c in df['cue_condition'].unique() if pd.notna(c) and str(c).lower() != 'na']
+            task_conditions = [t for t in df['task_condition'].unique() if pd.notna(t) and str(t).lower() != 'na']
+            for cue_condition in cue_conditions:
+                for task_condition in task_conditions:
+                    condition = f"t{task_condition}_c{cue_condition}"
+                    mask_acc = (df['cue_condition'] == cue_condition) & (df['task_condition'] == task_condition)
+                    mask_rt = mask_acc & (df['correct_trial'] == 1)
+                    mask_omission = mask_acc & (df['key_press'] == -1)
+                    mask_commission = mask_acc & (df['key_press'] != -1) & (df['correct_trial'] == 0)
+                    num_omissions = len(df[mask_omission])
+                    num_commissions = len(df[mask_commission])
+                    total_num_trials = len(df[mask_acc])
+                    metrics[f'{condition}_acc'] = df[mask_acc]['correct_trial'].mean()
+                    metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
+                    metrics[f'{condition}_omission_rate'] = num_omissions / total_num_trials if total_num_trials > 0 else np.nan
+                    metrics[f'{condition}_commission_rate'] = num_commissions / total_num_trials if total_num_trials > 0 else np.nan
+            return metrics
         # Special handling for stop signal task
         elif 'stop_signal' in task_name:
             metrics = {}
