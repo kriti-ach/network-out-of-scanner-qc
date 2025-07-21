@@ -439,14 +439,19 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task):
         for cond1 in conditions[task1]:
             for cond2 in conditions[task2]:
                 mask_acc = (cond1 in df[condition_columns[task1]]) & (cond2 in df[condition_columns[task2]])
+                print(f'mask_acc: {mask_acc}')
                 mask_rt = mask_acc & (df['correct_trial'] == 1)
+                print(f'mask_rt: {mask_rt}')
                 metrics[f'{cond1}_{cond2}_acc'] = df[mask_acc]['correct_trial'].mean()
                 metrics[f'{cond1}_{cond2}_rt'] = df[mask_rt]['rt'].mean()
                 mask_omission = (cond1 in df[condition_columns[task1]]) & (cond2 in df[condition_columns[task2]]) & (df['key_press'] == -1)
+                print(f'mask_omission: {mask_omission}')
                 mask_commission = (cond1 in df[condition_columns[task1]]) & (cond2 in df[condition_columns[task2]]) & (df['key_press'] != -1) & (df['correct_trial'] == 0)
+                print(f'mask_commission: {mask_commission}')
                 num_omissions = len(df[mask_omission])
                 num_commissions = len(df[mask_commission])
                 total_num_trials = len(df[mask_acc])
+                print(f'total_num_trials: {total_num_trials}')
                 metrics[f'{cond1}_{cond2}_omission_rate'] = num_omissions / total_num_trials
                 metrics[f'{cond1}_{cond2}_commission_rate'] = num_commissions / total_num_trials
     else:
