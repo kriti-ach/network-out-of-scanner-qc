@@ -65,7 +65,6 @@ DUAL_TASKS_FMRI = [
 ]
 
 FLANKER_CONDITIONS = ['congruent', 'incongruent']
-FLANKER_CONDITIONS_WITH_GO_NOGO = ['H_incongruent', 'F_incongruent', 'H_congruent', 'F_congruent']
 DIRECTED_FORGETTING_CONDITIONS = ['con', 'pos', 'neg']
 SPATIAL_TASK_SWITCHING_CONDITIONS = ['tstay_cstay', 'tstay_cswitch', 'tswitch_cswitch']
 CUED_TASK_SWITCHING_CONDITIONS = ['tstay_cstay', 'tstay_cswitch', 'tswitch_cswitch']
