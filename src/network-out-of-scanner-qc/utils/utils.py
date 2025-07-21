@@ -438,6 +438,10 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task):
         task1, task2 = list(conditions.keys())
         for cond1 in conditions[task1]:
             for cond2 in conditions[task2]:
+                print(f'cond1: {cond1}')
+                print(f'cond2: {cond2}')
+                print(f'condition_columns[task1]: {condition_columns[task1]}')
+                print(f'condition_columns[task2]: {condition_columns[task2]}')
                 mask_acc = (cond1 in df[condition_columns[task1]]) & (cond2 in df[condition_columns[task2]])
                 print(f'mask_acc: {mask_acc}')
                 mask_rt = mask_acc & (df['correct_trial'] == 1)
