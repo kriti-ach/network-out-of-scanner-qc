@@ -41,7 +41,6 @@ for subject_folder in glob.glob(str(folder_path / "s*")):
             if task_name:
                 try:
                     df = pd.read_csv(file)
-                    print(df.head())
                     # df = pd.read_csv(file, sep='\t')
                     metrics = get_task_metrics(df, task_name)
                     update_qc_csv(output_path, task_name, subject_id, metrics)

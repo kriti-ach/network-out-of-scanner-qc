@@ -77,3 +77,4 @@ SPATIAL_WITH_CUED_CONDITIONS = ['cuedtstaycstay_spatialtstaycstay', 'cuedtstaycs
                                 'cuedtstaycswitch_spatialtstaycswitch', 'cuedtstaycswitch_spatialtswitchcswitch',
                                 'cuedtswitchcswitch_spatialtstaycstay', 'cuedtswitchcswitch_spatialtstaycswitch',
                                 'cuedtswitchcswitch_spatialtswitchcswitch']
+FLANKER_WITH_CUED_CONDITIONS = ['congruent_tstay_cstay', 'congruent_tstay_cswitch', 'congruent_tswitch_cswitch', 'incongruent_tstay_cstay', 'incongruent_tstay_cswitch', 'incongruent_tswitch_cswitch']

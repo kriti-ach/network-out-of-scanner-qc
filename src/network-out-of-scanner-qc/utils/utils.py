@@ -16,7 +16,8 @@ from utils.globals import (
     SPATIAL_WITH_CUED_CONDITIONS,
     STOP_SIGNAL_CONDITIONS,
     GO_NOGO_CONDITIONS,
-    SHAPE_MATCHING_CONDITIONS
+    SHAPE_MATCHING_CONDITIONS,
+    FLANKER_WITH_CUED_CONDITIONS
 )
 
 def initialize_qc_csvs(tasks, output_path):
@@ -102,6 +103,8 @@ def get_task_columns(task_name, sample_df=None):
             return extend_metric_columns(base_columns, conditions)
         elif 'cued_task_switching' in task_name and 'spatial_task_switching' in task_name or 'CuedTS' in task_name and 'spatialTS' in task_name:
             return extend_metric_columns(base_columns, SPATIAL_WITH_CUED_CONDITIONS)
+        elif 'flanker' in task_name and 'cued_task_switching' in task_name or 'flanker' in task_name and 'CuedTS' in task_name:
+            return extend_metric_columns(base_columns, FLANKER_WITH_CUED_CONDITIONS)
         
     else:
         if 'spatial_task_switching' in task_name or 'spatialTS' in task_name:
