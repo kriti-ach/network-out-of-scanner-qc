@@ -227,7 +227,8 @@ def compute_cued_task_switching_metrics(
     condition_list,
     condition_type,
     flanker_col=None,
-    go_nogo_col=None
+    go_nogo_col=None,
+    shape_matching_col=None
 ):
     """
     Compute metrics for cued task switching and its duals (flanker/go_nogo).
@@ -262,6 +263,15 @@ def compute_cued_task_switching_metrics(
                 task, cue = t_part.split('_c')
                 mask_acc = (
                     (df[go_nogo_col].apply(lambda x: str(x).lower()) == go_nogo) &
+                    (df['task_condition'].apply(lambda x: str(x).lower()) == task) &
+                    (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
+                )
+            elif condition_type == 'shape_matching':
+                # cond format: {shape_matching}_t{task}_c{cue}
+                shape_matching, t_part = cond.split('_t')
+                task, cue = t_part.split('_c')
+                mask_acc = (
+                    (df[shape_matching_col].apply(lambda x: str(x).lower()) == shape_matching) &
                     (df['task_condition'].apply(lambda x: str(x).lower()) == task) &
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
