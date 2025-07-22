@@ -401,7 +401,7 @@ def get_task_metrics(df, task_name):
             return metrics
 
         elif 'cued_task_switching' in task_name:
-            return compute_cued_task_switching_metrics(df, [f"t{t}_c{c}" for c in df['cue_condition'].unique() if pd.notna(c) and str(c).lower() != 'na' for t in df['task_condition'].unique() if pd.notna(t) and str(t).lower() != 'na'], 'single')
+            return compute_cued_task_switching_metrics(df, CUED_TASK_SWITCHING_CONDITIONS, 'single')
         # Special handling for stop signal task
         elif 'stop_signal' in task_name:
             metrics = {}
