@@ -343,7 +343,7 @@ def get_task_metrics(df, task_name):
                 metrics[f'{cond}_rt'] = df[mask_rt]['rt'].mean()
                 metrics[f'{cond}_omission_rate'] = num_omissions / total_num_trials if total_num_trials > 0 else np.nan
                 metrics[f'{cond}_commission_rate'] = num_commissions / total_num_trials if total_num_trials > 0 else np.nan
-                if cond == 'congruent_tswitch_cswitch' or cond == 'incongruent_tswitch_cswitch':
+                if cond == 'congruent_tswitch_new_cswitch' or cond == 'incongruent_tswitch_new_cswitch':
                     print(f"Condition: {cond}")
                     print(f"  mask_acc: \n{mask_acc}")
                     print(f"  mask_rt: \n{mask_rt}")
