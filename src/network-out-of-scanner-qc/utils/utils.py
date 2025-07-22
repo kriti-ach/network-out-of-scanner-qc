@@ -18,7 +18,8 @@ from utils.globals import (
     GO_NOGO_CONDITIONS,
     SHAPE_MATCHING_CONDITIONS,
     FLANKER_WITH_CUED_CONDITIONS,
-    GO_NOGO_WITH_CUED_CONDITIONS
+    GO_NOGO_WITH_CUED_CONDITIONS,
+    SHAPE_MATCHING_WITH_CUED_CONDITIONS
 )
 
 def initialize_qc_csvs(tasks, output_path):
@@ -382,6 +383,8 @@ def get_task_metrics(df, task_name):
             return compute_cued_task_switching_metrics(df, FLANKER_WITH_CUED_CONDITIONS, 'flanker', flanker_col='flanker_condition')
         elif ('go_nogo' in task_name and 'cued_task_switching' in task_name) or ('go_nogo' in task_name and 'CuedTS' in task_name):
             return compute_cued_task_switching_metrics(df, GO_NOGO_WITH_CUED_CONDITIONS, 'go_nogo', go_nogo_col='go_nogo_condition')
+        elif ('shape_matching' in task_name and 'cued_task_switching' in task_name) or ('shape_matching' in task_name and 'CuedTS' in task_name):
+            return compute_cued_task_switching_metrics(df, SHAPE_MATCHING_WITH_CUED_CONDITIONS, 'shape_matching', shape_matching_col='shape_matching_condition')
     else:
         # Special handling for n-back task
         if 'n_back' in task_name:
