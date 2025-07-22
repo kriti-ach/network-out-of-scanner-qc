@@ -317,6 +317,12 @@ def get_task_metrics(df, task_name):
         elif ('flanker' in task_name and 'cued_task_switching' in task_name) or ('flanker' in task_name and 'CuedTS' in task_name):
             metrics = {}
             for cond in FLANKER_WITH_CUED_CONDITIONS:
+                print(f"DEBUG: {cond}")
+                print("Unique flanker_condition:", df['flanker_condition'].unique())
+                print("Unique task_condition:", df['task_condition'].unique())
+                print("Unique cue_condition:", df['cue_condition'].unique())
+                print("Mask sum:", mask_acc.sum())
+                print(df.loc[mask_acc, ['flanker_condition', 'task_condition', 'cue_condition']])
                 # cond format: '{flanker}_t{task}_c{cue}'
                 try:
                     flanker, t_part = cond.split('_t')
