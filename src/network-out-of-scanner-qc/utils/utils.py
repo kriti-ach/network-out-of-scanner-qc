@@ -279,7 +279,7 @@ def compute_cued_task_switching_metrics(
                 print(f'df["task_condition"].unique(): {df["task_condition"].unique()}')
                 print(f'df["cue_condition"].unique(): {df["cue_condition"].unique()}')
                 mask_acc = (
-                    (df[shape_matching_col].apply(lambda x: str(x).lower()) == shape_matching) &
+                    (df[shape_matching_col].apply(lambda x: str(x)) == shape_matching) &
                     (df['task_condition'].apply(lambda x: str(x).lower()) == ('switch' if task in ['switch', 'switch_new'] else task)) &
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
