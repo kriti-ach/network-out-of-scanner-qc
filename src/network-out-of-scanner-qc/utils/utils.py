@@ -218,8 +218,8 @@ def update_qc_csv(output_path, task_name, subject_id, metrics):
             **metrics
         })
         df = pd.concat([df, new_row], ignore_index=True)
-        if task_name == 'flanker_with_cued_task_switching':
-            df = df.drop(columns=[col for col in df.columns if col.startswith('congruent_tswitch_new_c') or col.startswith('incongruent_tswitch_new_c')])
+        if task_name == 'flanker_with_cued_task_switching' or task_name == 'shape_matching_with_cued_task_switching':
+            df = df.drop(columns=[col for col in df.columns if 'tswitch_new_c' in col])
         df.to_csv(qc_file, index=False)
     except FileNotFoundError:
         print(f"Warning: QC file {qc_file} not found")
@@ -274,7 +274,7 @@ def compute_cued_task_switching_metrics(
                 task, cue = t_part.split('_c')
                 mask_acc = (
                     (df[shape_matching_col].apply(lambda x: str(x).lower()) == shape_matching) &
-                    (df['task_condition'].apply(lambda x: str(x).lower()) == task) &
+                    (df['task_condition'].apply(lambda x: str(x).lower()) == ('switch' if task in ['switch', 'switch_new'] else task)) &
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
             else:
