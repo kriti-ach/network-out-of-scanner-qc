@@ -19,7 +19,8 @@ from utils.globals import (
     SHAPE_MATCHING_CONDITIONS,
     FLANKER_WITH_CUED_CONDITIONS,
     GO_NOGO_WITH_CUED_CONDITIONS,
-    SHAPE_MATCHING_WITH_CUED_CONDITIONS
+    SHAPE_MATCHING_WITH_CUED_CONDITIONS,
+    CUED_TASK_SWITCHING_WITH_DIRECTED_FORGETTING_CONDITIONS
 )
 
 def initialize_qc_csvs(tasks, output_path):
@@ -111,6 +112,8 @@ def get_task_columns(task_name, sample_df=None):
             return extend_metric_columns(base_columns, GO_NOGO_WITH_CUED_CONDITIONS)
         elif 'shape_matching' in task_name and 'cued_task_switching' in task_name or 'shape_matching' in task_name and 'CuedTS' in task_name:
             return extend_metric_columns(base_columns, SHAPE_MATCHING_WITH_CUED_CONDITIONS)
+        elif 'directed_forgetting' in task_name and 'cued_task_switching' in task_name or 'directedForgetting' in task_name and 'CuedTS' in task_name:
+            return extend_metric_columns(base_columns, CUED_TASK_SWITCHING_WITH_DIRECTED_FORGETTING_CONDITIONS)
         
     else:
         if 'spatial_task_switching' in task_name or 'spatialTS' in task_name:
@@ -230,7 +233,8 @@ def compute_cued_task_switching_metrics(
     condition_type,
     flanker_col=None,
     go_nogo_col=None,
-    shape_matching_col=None
+    shape_matching_col=None,
+    directed_forgetting_col=None
 ):
     """
     Compute metrics for cued task switching and its duals (flanker/go_nogo).
@@ -272,15 +276,18 @@ def compute_cued_task_switching_metrics(
                 # cond format: {shape_matching}_t{task}_c{cue}
                 shape_matching, t_part = cond.split('_t')
                 task, cue = t_part.split('_c')
-                print(f'shape_matching: {shape_matching}')
-                print(f'task: {task}')
-                print(f'cue: {cue}')
-                print(f'df[shape_matching_col].unique(): {df[shape_matching_col].unique()}')
-                print(f'df["task_condition"].unique(): {df["task_condition"].unique()}')
-                print(f'df["cue_condition"].unique(): {df["cue_condition"].unique()}')
                 mask_acc = (
                     (df[shape_matching_col].apply(lambda x: str(x)) == shape_matching) &
                     (df['task_condition'].apply(lambda x: str(x).lower()) == ('switch' if task in ['switch', 'switch_new'] else task)) &
+                    (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
+                )
+            elif condition_type == 'directed_forgetting':
+                # cond format: {directed_forgetting}_t{task}_c{cue}
+                directed_forgetting, t_part = cond.split('_t')
+                task, cue = t_part.split('_c')
+                mask_acc = (
+                    (df[directed_forgetting_col].apply(lambda x: str(x).lower()) == directed_forgetting) &
+                    (df['task_condition'].apply(lambda x: str(x).lower()) == task) &
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
             else:
@@ -403,6 +410,8 @@ def get_task_metrics(df, task_name):
             return compute_cued_task_switching_metrics(df, GO_NOGO_WITH_CUED_CONDITIONS, 'go_nogo', go_nogo_col='go_nogo_condition')
         elif ('shape_matching' in task_name and 'cued_task_switching' in task_name) or ('shape_matching' in task_name and 'CuedTS' in task_name):
             return compute_cued_task_switching_metrics(df, SHAPE_MATCHING_WITH_CUED_CONDITIONS, 'shape_matching', shape_matching_col='shape_matching_condition')
+        elif ('directed_forgetting' in task_name and 'cued_task_switching' in task_name) or ('directedForgetting' in task_name and 'CuedTS' in task_name):
+            return compute_cued_task_switching_metrics(df, CUED_TASK_SWITCHING_WITH_DIRECTED_FORGETTING_CONDITIONS, 'directed_forgetting', directed_forgetting_col='directed_forgetting_condition')
     else:
         # Special handling for n-back task
         if 'n_back' in task_name:
