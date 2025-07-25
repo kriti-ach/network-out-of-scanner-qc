@@ -88,7 +88,7 @@ def get_dual_n_back_columns(base_columns, sample_df, paired_col=None, cuedts=Fal
                 f"{n_back_condition}_{delay}back_{paired_condition}"
                 for n_back_condition in sample_df['n_back_condition'].str.lower().unique()
                 for delay in sample_df['delay'].unique()
-                for paired_condition in sample_df[paired_col].unique()
+                for paired_condition in sample_df[paired_col].str.lower().unique()
             ]
         return extend_metric_columns(base_columns, conditions)
     return base_columns  # Return base columns if no sample data available
@@ -399,7 +399,7 @@ def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_cond
     if cuedts:
         cue_conditions = [c for c in df['cue_condition'].unique() if pd.notna(c) and str(c).lower() != 'na']
         task_conditions = [t for t in df['task_condition'].unique() if pd.notna(t) and str(t).lower() != 'na']
-        for n_back_condition in df['n_back_condition'].unique():
+        for n_back_condition in df['n_back_condition'].str.lower().unique():
             if pd.isna(n_back_condition):
                 continue
             for delay in df['delay'].unique():
@@ -411,7 +411,7 @@ def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_cond
                             continue
                         col_prefix = f"{n_back_condition}_{delay}back_t{taskc}_c{cue}"
                         mask_acc = (
-                            (df['n_back_condition'] == n_back_condition) &
+                            (df['n_back_condition'].str.lower() == n_back_condition) &
                             (df['delay'] == delay) &
                             (df['cue_condition'] == cue) &
                             (df['task_condition'] == taskc)
@@ -436,21 +436,21 @@ def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_cond
                 if pd.isna(delay):
                     continue
                 condition = f"{n_back_condition}_{delay}back"
-                mask_acc = (df['n_back_condition'] == n_back_condition) & (df['delay'] == delay)
+                mask_acc = (df['n_back_condition'].str.lower() == n_back_condition) & (df['delay'] == delay)
                 mask_rt = mask_acc & (df['correct_trial'] == 1)
                 metrics[f'{condition}_acc'] = df[mask_acc]['correct_trial'].mean()
                 metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
     else:
         # Dual n-back: iterate over n_back_condition, delay, and paired task conditions
-        for n_back_condition in df['n_back_condition'].unique():
+        for n_back_condition in df['n_back_condition'].str.lower().unique():
             if pd.isna(n_back_condition):
                 continue
             for delay in df['delay'].unique():
                 if pd.isna(delay):
                     continue
                 for paired_cond in paired_conditions:
-                    condition = f"{n_back_condition}_{delay}back_{paired_cond}"
-                    mask_acc = (df['n_back_condition'] == n_back_condition) & (df['delay'] == delay) & (df[paired_task_col] == paired_cond)
+                    condition = f"{n_back_condition}_{delay}back_{paired_cond.lower()}"
+                    mask_acc = (df['n_back_condition'].str.lower() == n_back_condition) & (df['delay'] == delay) & (df[paired_task_col].str.lower() == paired_cond.lower())
                     mask_rt = mask_acc & (df['correct_trial'] == 1)
                     metrics[f'{condition}_acc'] = df[mask_acc]['correct_trial'].mean()
                     metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
