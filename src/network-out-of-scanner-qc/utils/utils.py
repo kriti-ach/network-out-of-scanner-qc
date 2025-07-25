@@ -54,7 +54,7 @@ def extend_metric_columns(base_columns, conditions):
         for metric in metric_types
     ]
 
-def get_dual_n_back_columns(base_columns, sample_df, paired_col, cuedts=False):
+def get_dual_n_back_columns(base_columns, sample_df, paired_col=None, cuedts=False):
     """
     Generate columns for dual n-back tasks (n-back paired with another task).
     - base_columns: list of base columns (e.g., ['subject_id'])
