@@ -143,6 +143,13 @@ def get_task_columns(task_name, sample_df=None):
                 for s_cond in SHAPE_MATCHING_CONDITIONS
             ]
             return extend_metric_columns(base_columns, conditions)
+        elif 'directed_forgetting' in task_name and 'spatial_task_switching' in task_name or 'directedForgetting' in task_name and 'spatialTS' in task_name:
+            conditions = [
+                f'{df_cond}_{s_cond}'
+                for df_cond in DIRECTED_FORGETTING_CONDITIONS
+                for s_cond in SPATIAL_TASK_SWITCHING_CONDITIONS
+            ]
+            return extend_metric_columns(base_columns, conditions)
         elif 'cued_task_switching' in task_name and 'spatial_task_switching' in task_name or 'CuedTS' in task_name and 'spatialTS' in task_name:
             return extend_metric_columns(base_columns, SPATIAL_WITH_CUED_CONDITIONS)
         elif 'flanker' in task_name and 'cued_task_switching' in task_name or 'flanker' in task_name and 'CuedTS' in task_name:
@@ -508,14 +515,23 @@ def get_task_metrics(df, task_name):
             }
             return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name))
         
+        elif ('spatial_task_switching' in task_name and 'directed_forgetting' in task_name) or ('spatialTS' in task_name and 'directedForgetting' in task_name):
+            conditions = {
+                'spatial_task_switching': SPATIAL_TASK_SWITCHING_CONDITIONS,
+                'directed_forgetting': DIRECTED_FORGETTING_CONDITIONS
+            }
+            condition_columns = {
+                'spatial_task_switching': 'task_switch',
+                'directed_forgetting': 'directed_forgetting_condition'
+            }
+            return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name))
+        
         elif ('cued_task_switching' in task_name and 'spatial_task_switching' in task_name) or ('CuedTS' in task_name and 'spatialTS' in task_name):
             metrics = {}
             for cond in SPATIAL_WITH_CUED_CONDITIONS:
                 # Parse condition like 'cuedtstaycstay_spatialtstaycstay'
                 try:
                     cued_part, spatial_part = cond.split('_spatial')
-                    print(f'cued_part: {cued_part}')
-                    print(f'spatial_part: {spatial_part}')
                     # Extract task and cue from cued part (e.g., 'cuedtstaycstay' -> 'stay' and 'stay')
                     t_start = cued_part.index('t')
                     # Find the 'c' that starts the cue part (after the task)
@@ -532,8 +548,6 @@ def get_task_metrics(df, task_name):
                         c_start = cued_part.index('c', t_start)
                         cued_task = cued_part[t_start + 1:c_start]
                         cued_cue = cued_part[c_start + 1:]
-                    print(f'cued_task: {cued_task}')
-                    print(f'cued_cue: {cued_cue}')
                     
                     # Extract task and cue from spatial part (e.g., 'tswitchcswitch' -> 'switch' and 'switch')
                     if 'cstay' in spatial_part:
@@ -549,8 +563,6 @@ def get_task_metrics(df, task_name):
                         c_start = spatial_part.index('c')
                         spatial_task = spatial_part[1:c_start]
                         spatial_cue = spatial_part[c_start + 1:]
-                    print(f'spatial_task: {spatial_task}')
-                    print(f'spatial_cue: {spatial_cue}')
                     # Create mask for both cued and spatial parts
                     mask_acc = (
                         (df['cue_condition'] == cued_cue) & 
