@@ -54,22 +54,38 @@ def extend_metric_columns(base_columns, conditions):
         for metric in metric_types
     ]
 
-def get_dual_n_back_columns(base_columns, sample_df, paired_col):
+def get_dual_n_back_columns(base_columns, sample_df, paired_col, cuedts=False):
     """
     Generate columns for dual n-back tasks (n-back paired with another task).
     - base_columns: list of base columns (e.g., ['subject_id'])
     - sample_df: DataFrame with sample data
     - paired_col: column name for the paired task (e.g., 'go_nogo_condition', 'flanker_condition')
+    - cuedts: if True, handle n-back with cued task switching
     Returns: list of columns
     """
     if sample_df is not None:
-        conditions = [
-            f"{n_back_condition}_{delay}back_{paired_condition}"
-            for n_back_condition in sample_df['n_back_condition'].unique()
-            for delay in sample_df['delay'].unique()
-            for paired_condition in sample_df[paired_col].unique()
-        ]
-        return extend_metric_columns(base_columns, conditions)
+        if cuedts:
+            cue_conditions = [c for c in sample_df['cue_condition'].unique() if pd.notna(c) and str(c).lower() != 'na']
+            task_conditions = [t for t in sample_df['task_condition'].unique() if pd.notna(t) and str(t).lower() != 'na']
+            for n_back_condition in sample_df['n_back_condition'].unique():
+                if pd.isna(n_back_condition):
+                    continue
+                for delay in sample_df['delay'].unique():
+                    if pd.isna(delay):
+                        continue
+                    for cue in cue_conditions:
+                        for taskc in task_conditions:
+                            col_prefix = f"{n_back_condition}_{delay}back_t{taskc}_c{cue}"
+                            conditions.append(col_prefix)
+            return extend_metric_columns(base_columns, conditions)
+        else:
+            conditions = [
+                f"{n_back_condition}_{delay}back_{paired_condition}"
+                for n_back_condition in sample_df['n_back_condition'].unique()
+                for delay in sample_df['delay'].unique()
+                for paired_condition in sample_df[paired_col].unique()
+            ]
+            return extend_metric_columns(base_columns, conditions)
     return base_columns  # Return base columns if no sample data available
 
 def get_task_columns(task_name, sample_df=None):
@@ -140,6 +156,8 @@ def get_task_columns(task_name, sample_df=None):
             return get_dual_n_back_columns(base_columns, sample_df, 'shape_matching_condition')
         elif 'directed_forgetting' in task_name and 'n_back' in task_name or 'directedForgetting' in task_name and 'NBack' in task_name:
             return get_dual_n_back_columns(base_columns, sample_df, 'directed_forgetting_condition')
+        elif 'n_back' in task_name and 'cued_task_switching' in task_name or 'NBack' in task_name and 'CuedTS' in task_name:
+            return get_dual_n_back_columns(base_columns, sample_df, 'cue_condition', 'task_condition', cuedts=True)
     else:
         if 'spatial_task_switching' in task_name or 'spatialTS' in task_name:
             return extend_metric_columns(base_columns, SPATIAL_TASK_SWITCHING_CONDITIONS)
@@ -519,6 +537,8 @@ def get_task_metrics(df, task_name):
         elif ('n_back' in task_name and 'directed_forgetting' in task_name) or ('NBack' in task_name and 'directed_forgetting' in task_name):
             paired_conditions = [c for c in df['directed_forgetting_condition'].unique() if pd.notna(c)]
             return compute_n_back_metrics(df, None, paired_task_col='directed_forgetting_condition', paired_conditions=paired_conditions)
+        elif ('n_back' in task_name and 'cued_task_switching' in task_name) or ('NBack' in task_name and 'CuedTS' in task_name):
+            return compute_n_back_metrics(df, None, paired_task_col='task_switch', paired_conditions=None, cuedts=True)
         # Add more dual n-back pairings as needed
     else:
         # Special handling for n-back task
