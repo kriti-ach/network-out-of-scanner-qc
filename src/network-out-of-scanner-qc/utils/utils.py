@@ -519,9 +519,9 @@ def get_task_metrics(df, task_name):
                     # Extract task and cue from cued part (e.g., 'cuedtstaycstay' -> 'tstay' and 'cstay')
                     t_start = cued_part.index('t')
                     c_start = cued_part.index('c', t_start)  # Find 'c' after 't'
-                    cued_task = cued_part[t_start:c_start]  # Extract 'tstay' from 'cuedtstaycstay'
+                    cued_task = cued_part[t_start + 1:c_start]  # Extract 'tstay' from 'cuedtstaycstay'
                     print(f'cued_task: {cued_task}')
-                    cued_cue = cued_part[c_start:]    # Extract 'cstay' from 'cuedtstaycstay'
+                    cued_cue = cued_part[c_start + 1:]    # Extract 'cstay' from 'cuedtstaycstay'
                     print(f'cued_cue: {cued_cue}')
                     spatial_task = spatial_part[1:spatial_part.index('c')]  # Extract 'tstay' from 'spatialtstaycstay'
                     print(f'spatial_task: {spatial_task}')
