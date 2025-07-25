@@ -514,12 +514,17 @@ def get_task_metrics(df, task_name):
                 # Parse condition like 'cuedtstaycstay_spatialtstaycstay'
                 try:
                     cued_part, spatial_part = cond.split('_spatial')
+                    print(f'cued_part: {cued_part}')
+                    print(f'spatial_part: {spatial_part}')
                     # Extract task and cue from cued part (e.g., 'cuedtstaycstay' -> 'tstay' and 'cstay')
                     cued_task = cued_part[4:cued_part.index('c')]  # Extract 'tstay' from 'cuedtstaycstay'
+                    print(f'cued_task: {cued_task}')
                     cued_cue = cued_part[cued_part.index('c'):]    # Extract 'cstay' from 'cuedtstaycstay'
+                    print(f'cued_cue: {cued_cue}')
                     spatial_task = spatial_part[4:spatial_part.index('c')]  # Extract 'tstay' from 'spatialtstaycstay'
+                    print(f'spatial_task: {spatial_task}')
                     spatial_cue = spatial_part[spatial_part.index('c'):]    # Extract 'cstay' from 'spatialtstaycstay'
-                    
+                    print(f'spatial_cue: {spatial_cue}')                
                     # Create mask for both cued and spatial parts
                     mask_acc = (
                         (df['cue_condition'] == cued_cue) & 
