@@ -86,7 +86,7 @@ def get_dual_n_back_columns(base_columns, sample_df, paired_col=None, cuedts=Fal
         else:
             conditions = [
                 f"{n_back_condition}_{delay}back_{paired_condition}"
-                for n_back_condition in sample_df['n_back_condition'].unique()
+                for n_back_condition in sample_df['n_back_condition'].str.lower().unique()
                 for delay in sample_df['delay'].unique()
                 for paired_condition in sample_df[paired_col].unique()
             ]
