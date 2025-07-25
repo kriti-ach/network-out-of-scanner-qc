@@ -516,17 +516,41 @@ def get_task_metrics(df, task_name):
                     cued_part, spatial_part = cond.split('_spatial')
                     print(f'cued_part: {cued_part}')
                     print(f'spatial_part: {spatial_part}')
-                    # Extract task and cue from cued part (e.g., 'cuedtstaycstay' -> 'tstay' and 'cstay')
+                    # Extract task and cue from cued part (e.g., 'cuedtstaycstay' -> 'stay' and 'stay')
                     t_start = cued_part.index('t')
-                    c_start = cued_part.index('c', t_start)  # Find 'c' after 't'
-                    cued_task = cued_part[t_start + 1:c_start]  # Extract 'tstay' from 'cuedtstaycstay'
+                    # Find the 'c' that starts the cue part (after the task)
+                    if 'cstay' in cued_part:
+                        c_start = cued_part.index('cstay')
+                        cued_task = cued_part[t_start + 1:c_start]  # Extract 'stay' from 'cuedtstaycstay'
+                        cued_cue = 'stay'
+                    elif 'cswitch' in cued_part:
+                        c_start = cued_part.index('cswitch')
+                        cued_task = cued_part[t_start + 1:c_start]  # Extract 'switch' from 'cuedtswitchcswitch'
+                        cued_cue = 'switch'
+                    else:
+                        # Fallback: find 'c' after 't'
+                        c_start = cued_part.index('c', t_start)
+                        cued_task = cued_part[t_start + 1:c_start]
+                        cued_cue = cued_part[c_start + 1:]
                     print(f'cued_task: {cued_task}')
-                    cued_cue = cued_part[c_start + 1:]    # Extract 'cstay' from 'cuedtstaycstay'
                     print(f'cued_cue: {cued_cue}')
-                    spatial_task = spatial_part[1:spatial_part.index('c')]  # Extract 'tstay' from 'spatialtstaycstay'
+                    
+                    # Extract task and cue from spatial part (e.g., 'tswitchcswitch' -> 'switch' and 'switch')
+                    if 'cstay' in spatial_part:
+                        c_start = spatial_part.index('cstay')
+                        spatial_task = spatial_part[1:c_start]  # Extract 'stay' from 'tstaycstay'
+                        spatial_cue = 'stay'
+                    elif 'cswitch' in spatial_part:
+                        c_start = spatial_part.index('cswitch')
+                        spatial_task = spatial_part[1:c_start]  # Extract 'switch' from 'tswitchcswitch'
+                        spatial_cue = 'switch'
+                    else:
+                        # Fallback: find 'c' after 't'
+                        c_start = spatial_part.index('c')
+                        spatial_task = spatial_part[1:c_start]
+                        spatial_cue = spatial_part[c_start + 1:]
                     print(f'spatial_task: {spatial_task}')
-                    spatial_cue = spatial_part[spatial_part.index('c') + 1 :]    # Extract 'cstay' from 'spatialtstaycstay'
-                    print(f'spatial_cue: {spatial_cue}')                
+                    print(f'spatial_cue: {spatial_cue}')
                     # Create mask for both cued and spatial parts
                     mask_acc = (
                         (df['cue_condition'] == cued_cue) & 
