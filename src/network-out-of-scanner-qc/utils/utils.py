@@ -191,6 +191,8 @@ def get_task_columns(task_name, sample_df=None):
             return get_dual_n_back_columns(base_columns, sample_df, 'directed_forgetting_condition')
         elif 'n_back' in task_name and 'cued_task_switching' in task_name or 'NBack' in task_name and 'CuedTS' in task_name:
             return get_dual_n_back_columns(base_columns, sample_df, cuedts=True)
+        elif 'n_back' in task_name and 'spatial_task_switching' in task_name or 'NBack' in task_name and 'spatialTS' in task_name:
+            return get_dual_n_back_columns(base_columns, sample_df, 'task_switch')
     else:
         if 'spatial_task_switching' in task_name or 'spatialTS' in task_name:
             return extend_metric_columns(base_columns, SPATIAL_TASK_SWITCHING_CONDITIONS)
@@ -660,6 +662,9 @@ def get_task_metrics(df, task_name):
             return compute_n_back_metrics(df, None, paired_task_col='directed_forgetting_condition', paired_conditions=paired_conditions)
         elif ('n_back' in task_name and 'cued_task_switching' in task_name) or ('NBack' in task_name and 'CuedTS' in task_name):
             return compute_n_back_metrics(df, None, paired_task_col='task_switch', paired_conditions=None, cuedts=True)
+        elif ('n_back' in task_name and 'spatial_task_switching' in task_name) or ('NBack' in task_name and 'spatialTS' in task_name):
+            paired_conditions = [c for c in df['task_switch'].unique() if pd.notna(c)]
+            return compute_n_back_metrics(df, None, paired_task_col='task_switch', paired_conditions=paired_conditions)
         # Add more dual n-back pairings as needed
     else:
         # Special handling for n-back task
