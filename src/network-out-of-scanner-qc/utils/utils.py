@@ -240,6 +240,9 @@ def get_task_columns(task_name, sample_df=None):
                     conditions.append(f"{spatial_task_switching_condition}_stop_fail_rt")
                     conditions.append(f"{spatial_task_switching_condition}_go_acc")
                     conditions.append(f"{spatial_task_switching_condition}_stop_fail_acc")
+                    conditions.append(f"{spatial_task_switching_condition}_stop_success")
+                return base_columns + conditions
+            return base_columns
     else:
         if 'spatial_task_switching' in task_name or 'spatialTS' in task_name:
             return extend_metric_columns(base_columns, SPATIAL_TASK_SWITCHING_CONDITIONS)
