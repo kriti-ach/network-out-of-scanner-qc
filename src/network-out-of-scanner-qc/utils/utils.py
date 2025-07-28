@@ -193,6 +193,46 @@ def get_task_columns(task_name, sample_df=None):
             return get_dual_n_back_columns(base_columns, sample_df, cuedts=True)
         elif 'n_back' in task_name and 'spatial_task_switching' in task_name or 'NBack' in task_name and 'spatialTS' in task_name:
             return get_dual_n_back_columns(base_columns, sample_df, 'task_switch')
+        elif ('stop_signal' in task_name or 'stopSignal' in task_name) and 'flanker' in task_name:
+            if sample_df is not None:
+                for flanker_condition in sample_df['flanker_condition'].unique():
+                    conditions.append(f"{flanker_condition}_go_rt")
+                    conditions.append(f"{flanker_condition}_stop_fail_rt")
+                    conditions.append(f"{flanker_condition}_go_acc")
+                    conditions.append(f"{flanker_condition}_stop_fail_acc")
+                    conditions.append(f"{flanker_condition}_stop_success")
+                return base_columns + conditions
+            return base_columns
+        elif 'stop_signal' in task_name and 'go_nogo' in task_name or 'stopSignal' in task_name and 'go_nogo' in task_name:
+            if sample_df is not None:
+                for go_nogo_condition in sample_df['go_nogo_condition'].unique():
+                    conditions.append(f"{go_nogo_condition}_go_rt")
+                    conditions.append(f"{go_nogo_condition}_stop_fail_rt")
+                    conditions.append(f"{go_nogo_condition}_go_acc")
+                    conditions.append(f"{go_nogo_condition}_stop_fail_acc")
+                    conditions.append(f"{go_nogo_condition}_stop_success")
+                return base_columns + conditions
+            return base_columns
+        elif 'stop_signal' in task_name and 'shape_matching' in task_name or 'stopSignal' in task_name and 'shape_matching' in task_name:
+            if sample_df is not None:
+                for shape_matching_condition in sample_df['shape_matching_condition'].unique():
+                    conditions.append(f"{shape_matching_condition}_go_rt")
+                    conditions.append(f"{shape_matching_condition}_stop_fail_rt")
+                    conditions.append(f"{shape_matching_condition}_go_acc")
+                    conditions.append(f"{shape_matching_condition}_stop_fail_acc")
+                    conditions.append(f"{shape_matching_condition}_stop_success")
+                return base_columns + conditions
+            return base_columns
+        elif 'stop_signal' in task_name and 'directed_forgetting' in task_name or 'stopSignal' in task_name and 'directedForgetting' in task_name:
+            if sample_df is not None:
+                for directed_forgetting_condition in sample_df['directed_forgetting_condition'].unique():
+                    conditions.append(f"{directed_forgetting_condition}_go_rt")
+                    conditions.append(f"{directed_forgetting_condition}_stop_fail_rt")
+                    conditions.append(f"{directed_forgetting_condition}_go_acc")
+                    conditions.append(f"{directed_forgetting_condition}_stop_fail_acc")
+                    conditions.append(f"{directed_forgetting_condition}_stop_success")
+                return base_columns + conditions
+            return base_columns
     else:
         if 'spatial_task_switching' in task_name or 'spatialTS' in task_name:
             return extend_metric_columns(base_columns, SPATIAL_TASK_SWITCHING_CONDITIONS)
@@ -665,6 +705,18 @@ def get_task_metrics(df, task_name):
         elif ('n_back' in task_name and 'spatial_task_switching' in task_name) or ('NBack' in task_name and 'spatialTS' in task_name):
             paired_conditions = [c for c in df['task_switch'].unique() if pd.notna(c) and c != 'na']
             return compute_n_back_metrics(df, None, paired_task_col='task_switch', paired_conditions=paired_conditions)
+        elif ('stop_signal' in task_name and 'flanker' in task_name) or ('stopSignal' in task_name and 'flanker' in task_name):
+            paired_conditions = [c for c in df['flanker_condition'].unique() if pd.notna(c)]
+            return compute_stop_signal_metrics(df, paired_task_col='flanker_condition', paired_conditions=paired_conditions)
+        elif ('stop_signal' in task_name and 'go_nogo' in task_name) or ('stopSignal' in task_name and 'go_nogo' in task_name):
+            paired_conditions = [c for c in df['go_nogo_condition'].unique() if pd.notna(c)]
+            return compute_stop_signal_metrics(df, paired_task_col='go_nogo_condition', paired_conditions=paired_conditions)
+        elif ('stop_signal' in task_name and 'shape_matching' in task_name) or ('stopSignal' in task_name and 'shape_matching' in task_name):
+            paired_conditions = [c for c in df['shape_matching_condition'].unique() if pd.notna(c)]
+            return compute_stop_signal_metrics(df, paired_task_col='shape_matching_condition', paired_conditions=paired_conditions)
+        elif ('stop_signal' in task_name and 'directed_forgetting' in task_name) or ('stopSignal' in task_name and 'directedForgetting' in task_name):
+            paired_conditions = [c for c in df['directed_forgetting_condition'].unique() if pd.notna(c)]
+            return compute_stop_signal_metrics(df, paired_task_col='directed_forgetting_condition', paired_conditions=paired_conditions)
         # Add more dual n-back pairings as needed
     else:
         # Special handling for n-back task
@@ -675,51 +727,7 @@ def get_task_metrics(df, task_name):
             return compute_cued_task_switching_metrics(df, CUED_TASK_SWITCHING_CONDITIONS, 'single')
         # Special handling for stop signal task
         elif 'stop_signal' in task_name:
-            metrics = {}
-            # Use your column names
-            go_mask = (df['SS_trial_type'] == 'go')
-            stop_mask = (df['SS_trial_type'] == 'stop')
-            stop_fail_mask = stop_mask & (df['correct_trial'] == 0)
-            stop_succ_mask = stop_mask & (df['correct_trial'] == 1)
-
-            # RTs
-            metrics['go_rt'] = df.loc[go_mask & (df['rt'].notna()), 'rt'].mean()
-            metrics['stop_fail_rt'] = df.loc[stop_fail_mask & (df['rt'].notna()), 'rt'].mean()
-
-            # Accuracies
-            metrics['go_acc'] = df.loc[go_mask, 'correct_trial'].mean()
-            # 1. Learn mapping from go trials
-            go_trials = df[go_mask]
-            stim_to_resp = (
-                go_trials.groupby('stim')['correct_response']
-                .agg(lambda x: x.value_counts().idxmax())
-                .to_dict()
-            )
-
-            # 2. For stop-failure trials with a response
-            stop_fail_with_resp = df[stop_fail_mask & (df['key_press'] != -1)]
-            if not stop_fail_with_resp.empty:
-                stop_fail_with_resp = stop_fail_with_resp.copy()
-                stop_fail_with_resp['expected_response'] = stop_fail_with_resp['stim'].map(stim_to_resp)
-                stop_fail_with_resp['is_correct'] = stop_fail_with_resp['key_press'] == stop_fail_with_resp['expected_response']
-                metrics['stop_failure_acc'] = stop_fail_with_resp['is_correct'].mean()
-            else:
-                metrics['stop_failure_acc'] = np.nan
-
-            metrics['stop_success'] = len(df[stop_succ_mask])/len(df[stop_mask])
-            # SSD stats
-            ssd_vals = df.loc[stop_mask, 'SS_delay'].dropna()
-            metrics['avg_ssd'] = ssd_vals.mean()
-            metrics['min_ssd'] = ssd_vals.min()
-            metrics['max_ssd'] = ssd_vals.max()
-            metrics['min_ssd_count'] = (ssd_vals == metrics['min_ssd']).sum() if not np.isnan(metrics['min_ssd']) else 0
-            metrics['max_ssd_count'] = (ssd_vals == metrics['max_ssd']).sum() if not np.isnan(metrics['max_ssd']) else 0
-
-            # SSRT
-            metrics['ssrt'] = compute_SSRT(df)
-
-            return metrics
-
+            return compute_stop_signal_metrics(df)
         # For other single tasks, we only need one set of conditions
         elif 'directed_forgetting' in task_name or 'directedForgetting' in task_name:
             conditions = {'directed_forgetting': DIRECTED_FORGETTING_CONDITIONS}
@@ -815,6 +823,102 @@ def append_summary_rows_to_csv(csv_path):
     for stat, values in summary.items():
         df.loc[len(df)] = values
     df.to_csv(csv_path, index=False)
+
+def compute_stop_signal_metrics(df, paired_task_col=None, paired_conditions=None):
+    """
+    Compute stop signal metrics for single stop signal tasks or dual tasks with stop signal.
+    - df: DataFrame
+    - paired_task_col: column name for the paired task (if dual)
+    - paired_conditions: list of paired task conditions (if dual)
+    Returns: dict of metrics
+    """
+    metrics = {}
+    
+    if paired_task_col is None:
+        # Single stop signal task
+        go_mask = (df['SS_trial_type'] == 'go')
+        stop_mask = (df['SS_trial_type'] == 'stop')
+        stop_fail_mask = stop_mask & (df['correct_trial'] == 0)
+        stop_succ_mask = stop_mask & (df['correct_trial'] == 1)
+
+        # RTs
+        metrics['go_rt'] = df.loc[go_mask & (df['rt'].notna()), 'rt'].mean()
+        metrics['stop_fail_rt'] = df.loc[stop_fail_mask & (df['rt'].notna()), 'rt'].mean()
+
+        # Accuracies
+        metrics['go_acc'] = df.loc[go_mask, 'correct_trial'].mean()
+        
+        # Stop failure accuracy based on stimulus-response mapping from go trials
+        go_trials = df[go_mask]
+        stim_to_resp = (
+            go_trials.groupby('stim')['correct_response']
+            .agg(lambda x: x.value_counts().idxmax())
+            .to_dict()
+        )
+
+        stop_fail_with_resp = df[stop_fail_mask & (df['key_press'] != -1)]
+        if not stop_fail_with_resp.empty:
+            stop_fail_with_resp = stop_fail_with_resp.copy()
+            stop_fail_with_resp['expected_response'] = stop_fail_with_resp['stim'].map(stim_to_resp)
+            stop_fail_with_resp['is_correct'] = stop_fail_with_resp['key_press'] == stop_fail_with_resp['expected_response']
+            metrics['stop_fail_acc'] = stop_fail_with_resp['is_correct'].mean()
+        else:
+            metrics['stop_fail_acc'] = np.nan
+
+        metrics['stop_success'] = len(df[stop_succ_mask])/len(df[stop_mask])
+        
+        # SSD stats
+        ssd_vals = df.loc[stop_mask, 'SS_delay'].dropna()
+        metrics['avg_ssd'] = ssd_vals.mean()
+        metrics['min_ssd'] = ssd_vals.min()
+        metrics['max_ssd'] = ssd_vals.max()
+        metrics['min_ssd_count'] = (ssd_vals == metrics['min_ssd']).sum() if not np.isnan(metrics['min_ssd']) else 0
+        metrics['max_ssd_count'] = (ssd_vals == metrics['max_ssd']).sum() if not np.isnan(metrics['max_ssd']) else 0
+
+        # SSRT
+        metrics['ssrt'] = compute_SSRT(df)
+        
+    else:
+        # Dual stop signal task
+        for paired_cond in paired_conditions:
+            # Filter for the paired task condition
+            paired_mask = df[paired_task_col] == paired_cond
+            
+            go_mask = (df['SS_trial_type'] == 'go') & paired_mask
+            stop_mask = (df['SS_trial_type'] == 'stop') & paired_mask
+            stop_fail_mask = stop_mask & (df['correct_trial'] == 0)
+            stop_succ_mask = stop_mask & (df['correct_trial'] == 1)
+
+            # RTs
+            metrics[f'{paired_cond}_go_rt'] = df.loc[go_mask & (df['rt'].notna()), 'rt'].mean()
+            metrics[f'{paired_cond}_stop_fail_rt'] = df.loc[stop_fail_mask & (df['rt'].notna()), 'rt'].mean()
+
+            # Accuracies
+            metrics[f'{paired_cond}_go_acc'] = df.loc[go_mask, 'correct_trial'].mean()
+            
+            # Stop failure accuracy based on stimulus-response mapping from go trials
+            go_trials = df[go_mask]
+            if not go_trials.empty:
+                stim_to_resp = (
+                    go_trials.groupby('stim')['correct_response']
+                    .agg(lambda x: x.value_counts().idxmax())
+                    .to_dict()
+                )
+
+                stop_fail_with_resp = df[stop_fail_mask & (df['key_press'] != -1)]
+                if not stop_fail_with_resp.empty:
+                    stop_fail_with_resp = stop_fail_with_resp.copy()
+                    stop_fail_with_resp['expected_response'] = stop_fail_with_resp['stim'].map(stim_to_resp)
+                    stop_fail_with_resp['is_correct'] = stop_fail_with_resp['key_press'] == stop_fail_with_resp['expected_response']
+                    metrics[f'{paired_cond}_stop_fail_acc'] = stop_fail_with_resp['is_correct'].mean()
+                else:
+                    metrics[f'{paired_cond}_stop_fail_acc'] = np.nan
+            else:
+                metrics[f'{paired_cond}_stop_fail_acc'] = np.nan
+
+            metrics[f'{paired_cond}_stop_success'] = len(df[stop_succ_mask])/len(df[stop_mask]) if len(df[stop_mask]) > 0 else np.nan
+    
+    return metrics
 
 def compute_SSRT(df, max_go_rt=2):
     # Only use test phase if present
