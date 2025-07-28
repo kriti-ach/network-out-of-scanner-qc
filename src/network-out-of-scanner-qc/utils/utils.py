@@ -233,6 +233,13 @@ def get_task_columns(task_name, sample_df=None):
                     conditions.append(f"{directed_forgetting_condition}_stop_success")
                 return base_columns + conditions
             return base_columns
+        elif 'stop_signal' in task_name and 'spatial_task_switching' in task_name or 'stopSignal' in task_name and 'spatialTS' in task_name:
+            if sample_df is not None:
+                for spatial_task_switching_condition in sample_df['task_switch'].unique():
+                    conditions.append(f"{spatial_task_switching_condition}_go_rt")
+                    conditions.append(f"{spatial_task_switching_condition}_stop_fail_rt")
+                    conditions.append(f"{spatial_task_switching_condition}_go_acc")
+                    conditions.append(f"{spatial_task_switching_condition}_stop_fail_acc")
     else:
         if 'spatial_task_switching' in task_name or 'spatialTS' in task_name:
             return extend_metric_columns(base_columns, SPATIAL_TASK_SWITCHING_CONDITIONS)
@@ -717,6 +724,9 @@ def get_task_metrics(df, task_name):
         elif ('stop_signal' in task_name and 'directed_forgetting' in task_name) or ('stopSignal' in task_name and 'directedForgetting' in task_name):
             paired_conditions = [c for c in df['directed_forgetting_condition'].unique() if pd.notna(c)]
             return compute_stop_signal_metrics(df, paired_task_col='directed_forgetting_condition', paired_conditions=paired_conditions, stim_col='directed_forgetting_condition')
+        elif ('stop_signal' in task_name and 'spatial_task_switching' in task_name) or ('stopSignal' in task_name and 'spatialTS' in task_name):
+            paired_conditions = [c for c in df['task_switch'].unique() if pd.notna(c) and c != 'na']
+            return compute_stop_signal_metrics(df, paired_task_col='task_switch', paired_conditions=paired_conditions, stim_cols=['number', 'predictable_dimension'])
         # Add more dual n-back pairings as needed
     else:
         # Special handling for n-back task
@@ -824,7 +834,7 @@ def append_summary_rows_to_csv(csv_path):
         df.loc[len(df)] = values
     df.to_csv(csv_path, index=False)
 
-def compute_stop_signal_metrics(df, paired_task_col=None, paired_conditions=None, stim_col='stim'):
+def compute_stop_signal_metrics(df, paired_task_col=None, paired_conditions=None, stim_col=None, stim_cols=[]):
     """
     Compute stop signal metrics for single stop signal tasks or dual tasks with stop signal.
     - df: DataFrame
@@ -886,20 +896,45 @@ def compute_stop_signal_metrics(df, paired_task_col=None, paired_conditions=None
             metrics[f'{paired_cond}_go_acc'] = df.loc[go_mask, 'correct_trial'].mean()
             
             # Stop failure accuracy based on stimulus-response mapping from go trials
-            go_trials = df[go_mask]
-            if not go_trials.empty:
-                stim_to_resp = (
-                    go_trials.groupby(stim_col)['correct_response']
-                    .agg(lambda x: x.value_counts().idxmax())
-                    .to_dict()
-                )
+            if stim_col is not None:
+                go_trials = df[go_mask]
+                if not go_trials.empty:
+                    stim_to_resp = (
+                        go_trials.groupby(stim_col)['correct_response']
+                        .agg(lambda x: x.value_counts().idxmax())
+                        .to_dict()
+                    )
 
-                stop_fail_with_resp = df[stop_fail_mask & (df['key_press'] != -1)]
-                if not stop_fail_with_resp.empty:
-                    stop_fail_with_resp = stop_fail_with_resp.copy()
-                    stop_fail_with_resp['expected_response'] = stop_fail_with_resp[stim_col].map(stim_to_resp)
-                    stop_fail_with_resp['is_correct'] = stop_fail_with_resp['key_press'] == stop_fail_with_resp['expected_response']
-                    metrics[f'{paired_cond}_stop_fail_acc'] = stop_fail_with_resp['is_correct'].mean()
+                    stop_fail_with_resp = df[stop_fail_mask & (df['key_press'] != -1)]
+                    if not stop_fail_with_resp.empty:
+                        stop_fail_with_resp = stop_fail_with_resp.copy()
+                        stop_fail_with_resp['expected_response'] = stop_fail_with_resp[stim_col].map(stim_to_resp)
+                        stop_fail_with_resp['is_correct'] = stop_fail_with_resp['key_press'] == stop_fail_with_resp['expected_response']
+                        metrics[f'{paired_cond}_stop_fail_acc'] = stop_fail_with_resp['is_correct'].mean()
+                    else:
+                        metrics[f'{paired_cond}_stop_fail_acc'] = np.nan
+                else:
+                    metrics[f'{paired_cond}_stop_fail_acc'] = np.nan
+            elif len(stim_cols) > 0:
+                go_trials = df[go_mask]
+                if not go_trials.empty:
+                    # Group by multiple stimulus columns
+                    stim_to_resp = (
+                        go_trials.groupby(stim_cols)['correct_response']
+                        .agg(lambda x: x.value_counts().idxmax())
+                        .to_dict()
+                    )
+
+                    stop_fail_with_resp = df[stop_fail_mask & (df['key_press'] != -1)]
+                    if not stop_fail_with_resp.empty:
+                        stop_fail_with_resp = stop_fail_with_resp.copy()
+                        # Create a tuple key from multiple stimulus columns
+                        stop_fail_with_resp['stim_key'] = stop_fail_with_resp[stim_cols].apply(tuple, axis=1)
+                        stop_fail_with_resp['expected_response'] = stop_fail_with_resp['stim_key'].map(stim_to_resp)
+                        stop_fail_with_resp['is_correct'] = stop_fail_with_resp['key_press'] == stop_fail_with_resp['expected_response']
+                        metrics[f'{paired_cond}_stop_fail_acc'] = stop_fail_with_resp['is_correct'].mean()
+                    else:
+                        metrics[f'{paired_cond}_stop_fail_acc'] = np.nan
                 else:
                     metrics[f'{paired_cond}_stop_fail_acc'] = np.nan
             else:
