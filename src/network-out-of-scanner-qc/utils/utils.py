@@ -752,7 +752,7 @@ def get_task_metrics(df, task_name):
             return compute_stop_signal_metrics(df, dual_task=True, paired_task_col='flanker_condition', paired_conditions=paired_conditions, stim_col='center_letter')
         elif ('stop_signal' in task_name and 'go_nogo' in task_name) or ('stopSignal' in task_name and 'go_nogo' in task_name):
             paired_conditions = [c for c in df['go_nogo_condition'].unique() if pd.notna(c)]
-            return compute_stop_signal_metrics(df, dual_task=True, paired_task_col='go_nogo_condition', paired_conditions=paired_conditions, stim_col='go_nogo_stim')
+            return compute_stop_signal_metrics(df, dual_task=True, paired_task_col='go_nogo_condition', paired_conditions=paired_conditions, stim_col='go_nogo_condition')
         elif ('stop_signal' in task_name and 'shape_matching' in task_name) or ('stopSignal' in task_name and 'shape_matching' in task_name):
             paired_conditions = [c for c in df['shape_matching_condition'].unique() if pd.notna(c)]
             return compute_stop_signal_metrics(df, dual_task=True, paired_task_col='shape_matching_condition', paired_conditions=paired_conditions, stim_col='shape_matching_condition')
