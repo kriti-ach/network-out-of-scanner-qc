@@ -924,6 +924,7 @@ def compute_stop_signal_metrics(df, dual_task = False, paired_task_col=None, pai
                             print(f"No paired mask found for {paired_cond}")
                             print(df['n_back_condition'].unique())
                             print(df['delay'].unique())
+                            print(df['delay'])
                             print(delay)
                             print(n_back_condition)
                     else:
