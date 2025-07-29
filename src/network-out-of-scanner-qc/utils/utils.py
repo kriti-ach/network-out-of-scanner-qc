@@ -919,10 +919,7 @@ def compute_stop_signal_metrics(df, dual_task = False, paired_task_col=None, pai
                         n_back_condition = parts[0]
                         delay = parts[1].replace('back', '')
                         paired_mask = (df['n_back_condition'] == n_back_condition) & (df['delay'] == delay)
-                        print(n_back_condition, delay)
-                        print(type(n_back_condition), type(delay))
-                        print(type(df['n_back_condition']), type(df['delay']))
-                        print(paired_mask)
+                        print(any(paired_mask))
                     else:
                         continue
                 else:
