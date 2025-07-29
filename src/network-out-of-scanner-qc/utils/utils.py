@@ -14,7 +14,6 @@ from utils.globals import (
     SPATIAL_TASK_SWITCHING_CONDITIONS,
     CUED_TASK_SWITCHING_CONDITIONS,
     SPATIAL_WITH_CUED_CONDITIONS,
-    STOP_SIGNAL_CONDITIONS,
     GO_NOGO_CONDITIONS,
     SHAPE_MATCHING_CONDITIONS,
     FLANKER_WITH_CUED_CONDITIONS,
@@ -383,6 +382,7 @@ def update_qc_csv(output_path, task_name, subject_id, metrics):
         df = pd.concat([df, new_row], ignore_index=True)
         if task_name == 'flanker_with_cued_task_switching' or task_name == 'shape_matching_with_cued_task_switching':
             df = df.drop(columns=[col for col in df.columns if 'tswitch_new_c' in col])
+        df = df.sort_values(by='subject_id')
         df.to_csv(qc_file, index=False)
     except FileNotFoundError:
         print(f"Warning: QC file {qc_file} not found")

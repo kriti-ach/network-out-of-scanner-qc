@@ -69,7 +69,6 @@ DIRECTED_FORGETTING_CONDITIONS = ['con', 'pos', 'neg']
 SPATIAL_TASK_SWITCHING_CONDITIONS = ['tstay_cstay', 'tstay_cswitch', 'tswitch_cswitch']
 CUED_TASK_SWITCHING_CONDITIONS = ['tstay_cstay', 'tstay_cswitch', 'tswitch_cswitch']
 N_BACK_CONDITIONS = []  # Will be generated dynamically based on trial_type and delay
-STOP_SIGNAL_CONDITIONS = ['stop', 'go']
 GO_NOGO_CONDITIONS = ['go', 'nogo']
 SHAPE_MATCHING_CONDITIONS = ['SSS', 'SDD', 'DNN', 'DSD', 'DDS', 'DDD']
 SPATIAL_WITH_CUED_CONDITIONS = ['cuedtstaycstay_spatialtstaycstay', 'cuedtstaycstay_spatialtstaycswitch', 
