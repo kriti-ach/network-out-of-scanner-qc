@@ -260,16 +260,19 @@ def get_task_columns(task_name, sample_df=None):
             return base_columns
         elif 'stop_signal' in task_name and 'cued_task_switching' in task_name or 'stopSignal' in task_name and 'CuedTS' in task_name:
             if sample_df is not None:
-                for cue_condition, task_condition in zip(sample_df['cue_condition'].unique(), sample_df['task_condition'].unique()):
-                    if cue_condition == "stay" and task_condition == "switch":
-                        continue
-                    elif cue_condition == "na" and task_condition == "na":
-                        continue
-                    conditions.append(f"t{task_condition}_c{cue_condition}_go_rt")
-                    conditions.append(f"t{task_condition}_c{cue_condition}_stop_fail_rt")
-                    conditions.append(f"t{task_condition}_c{cue_condition}_go_acc")
-                    conditions.append(f"t{task_condition}_c{cue_condition}_stop_fail_acc")
-                    conditions.append(f"t{task_condition}_c{cue_condition}_stop_success")
+                conditions = []
+                for cue_condition in sample_df['cue_condition'].unique():
+                    if pd.notna(cue_condition) and str(cue_condition).lower() != 'na':
+                        for task_condition in sample_df['task_condition'].unique():
+                            if pd.notna(task_condition) and str(task_condition).lower() != 'na':
+                                # Skip the combination where cue is stay and task is switch
+                                if cue_condition == "stay" and task_condition == "switch":
+                                    continue
+                                conditions.append(f"t{task_condition}_c{cue_condition}_go_rt")
+                                conditions.append(f"t{task_condition}_c{cue_condition}_stop_fail_rt")
+                                conditions.append(f"t{task_condition}_c{cue_condition}_go_acc")
+                                conditions.append(f"t{task_condition}_c{cue_condition}_stop_fail_acc")
+                                conditions.append(f"t{task_condition}_c{cue_condition}_stop_success")
                 return base_columns + conditions
             return base_columns
     else:
@@ -772,9 +775,9 @@ def get_task_metrics(df, task_name):
             # Create combined conditions for cued task switching (e.g., "tstay_cstay", "tstay_cswitch")
             paired_conditions = []
             for cue_condition in df['cue_condition'].unique():
-                if pd.notna(cue_condition):
+                if pd.notna(cue_condition) and str(cue_condition).lower() != 'na':
                     for task_condition in df['task_condition'].unique():
-                        if pd.notna(task_condition):
+                        if pd.notna(task_condition) and str(task_condition).lower() != 'na':
                             # Skip the combination where cue is stay and task is switch
                             if cue_condition == "stay" and task_condition == "switch":
                                 continue
