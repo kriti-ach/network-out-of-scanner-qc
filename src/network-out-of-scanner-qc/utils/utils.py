@@ -205,11 +205,14 @@ def get_task_columns(task_name, sample_df=None):
         elif 'stop_signal' in task_name and 'go_nogo' in task_name or 'stopSignal' in task_name and 'go_nogo' in task_name:
             if sample_df is not None:
                 for go_nogo_condition in sample_df['go_nogo_condition'].unique():
+                    if go_nogo_condition == 'nogo':
+                        continue
                     conditions.append(f"{go_nogo_condition}_go_rt")
                     conditions.append(f"{go_nogo_condition}_stop_fail_rt")
                     conditions.append(f"{go_nogo_condition}_go_acc")
                     conditions.append(f"{go_nogo_condition}_stop_fail_acc")
                     conditions.append(f"{go_nogo_condition}_stop_success")
+                    conditions.append(f"nogo_commission_rate")
                 return base_columns + conditions
             return base_columns
         elif 'stop_signal' in task_name and 'shape_matching' in task_name or 'stopSignal' in task_name and 'shape_matching' in task_name:
@@ -1029,6 +1032,15 @@ def compute_stop_signal_metrics(df, dual_task = False, paired_task_col=None, pai
                 metrics[f'{paired_cond}_stop_fail_acc'] = np.nan
 
             metrics[f'{paired_cond}_stop_success'] = len(df[stop_succ_mask])/len(df[stop_mask]) if len(df[stop_mask]) > 0 else np.nan
+            
+            # For go/nogo tasks, also calculate nogo commission rate
+            if paired_task_col == 'go_nogo_condition' and paired_cond == 'go':
+                # Calculate nogo commission rate across all nogo trials
+                nogo_mask = (df['go_nogo_condition'] == 'nogo')
+                nogo_commission_mask = nogo_mask & (df['key_press'] != -1) & (df['correct_trial'] == 0)
+                num_nogo_commissions = len(df[nogo_commission_mask])
+                total_nogo_trials = len(df[nogo_mask])
+                metrics['nogo_commission_rate'] = num_nogo_commissions / total_nogo_trials if total_nogo_trials > 0 else np.nan
     # SSD stats
         ssd_vals = df.loc[stop_mask, 'SS_delay'].dropna()
         metrics['avg_ssd'] = ssd_vals.mean()
