@@ -51,7 +51,3 @@ packages = ["network-out-of-scanner-qc"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/network-out-of-scanner-qc"]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
