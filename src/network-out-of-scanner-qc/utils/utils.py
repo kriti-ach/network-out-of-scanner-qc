@@ -353,6 +353,15 @@ def update_qc_csv(output_path, task_name, subject_id, metrics):
                 new_row[col] = np.nan
         # Reorder columns to match df
         new_row = new_row[df.columns]
+        
+        # Ensure data types match
+        for col in df.columns:
+            if col in new_row.columns:
+                if pd.api.types.is_numeric_dtype(df[col]):
+                    new_row[col] = pd.to_numeric(new_row[col], errors='coerce')
+                elif pd.api.types.is_string_dtype(df[col]):
+                    new_row[col] = new_row[col].astype(str)
+        
         df = pd.concat([df, new_row], ignore_index=True)
         if task_name == 'flanker_with_cued_task_switching' or task_name == 'shape_matching_with_cued_task_switching':
             df = df.drop(columns=[col for col in df.columns if 'tswitch_new_c' in col])
