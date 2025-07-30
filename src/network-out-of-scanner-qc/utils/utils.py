@@ -54,52 +54,6 @@ def extend_metric_columns(base_columns, conditions):
         for metric in metric_types
     ]
 
-def generate_n_back_conditions(df, include_cuedts=False, include_paired_task=False, paired_task_col=None, paired_conditions=None):
-    """
-    Generate n-back condition names from DataFrame.
-    
-    Args:
-        df (pd.DataFrame): DataFrame containing n-back data
-        include_cuedts (bool): If True, include cued task switching conditions
-        include_paired_task (bool): If True, include paired task conditions
-        paired_task_col (str): Column name for paired task (if include_paired_task=True)
-        paired_conditions (list): List of paired task conditions (if include_paired_task=True)
-        
-    Returns:
-        list: List of n-back condition names
-    """
-    conditions = []
-    
-    for n_back_condition in df['n_back_condition'].unique():
-        if pd.isna(n_back_condition):
-            continue
-        for delay in df['delay'].unique():
-            if pd.isna(delay):
-                continue
-                
-            if include_cuedts:
-                # Handle n-back with cued task switching
-                cue_conditions = [c for c in df['cue_condition'].unique() if pd.notna(c) and str(c).lower() != 'na']
-                task_conditions = [t for t in df['task_condition'].unique() if pd.notna(t) and str(t).lower() != 'na']
-                
-                for cue in cue_conditions:
-                    for taskc in task_conditions:
-                        if cue == "stay" and taskc == "switch":
-                            continue
-                        col_prefix = f"{n_back_condition}_{delay}back_t{taskc}_c{cue}"
-                        conditions.append(col_prefix)
-            elif include_paired_task and paired_task_col is not None and paired_conditions is not None:
-                # Handle n-back with paired task
-                for paired_condition in paired_conditions:
-                    condition = f"{n_back_condition}_{delay}back_{paired_condition.lower()}"
-                    conditions.append(condition)
-            else:
-                # Simple n-back condition
-                condition = f"{n_back_condition}_{delay}back"
-                conditions.append(condition)
-    
-    return conditions
-
 def get_dual_n_back_columns(base_columns, sample_df, paired_col=None, cuedts=False):
     """
     Generate columns for dual n-back tasks (n-back paired with another task).
@@ -109,12 +63,32 @@ def get_dual_n_back_columns(base_columns, sample_df, paired_col=None, cuedts=Fal
     - cuedts: if True, handle n-back with cued task switching
     Returns: list of columns
     """
+    conditions = []
     if sample_df is not None:
         if cuedts:
-            conditions = generate_n_back_conditions(sample_df, include_cuedts=True)
+            cue_conditions = [c for c in sample_df['cue_condition'].unique() if pd.notna(c) and str(c).lower() != 'na']
+            task_conditions = [t for t in sample_df['task_condition'].unique() if pd.notna(t) and str(t).lower() != 'na']
+            for n_back_condition in sample_df['n_back_condition'].unique():
+                if pd.isna(n_back_condition):
+                    continue
+                for delay in sample_df['delay'].unique():
+                    if pd.isna(delay):
+                        continue
+                    for cue in cue_conditions:
+                        for taskc in task_conditions:
+                            if cue == "stay" and taskc == "switch":
+                                continue
+                            else:
+                                col_prefix = f"{n_back_condition}_{delay}back_t{taskc}_c{cue}"
+                                conditions.append(col_prefix)
+            return extend_metric_columns(base_columns, conditions)
         else:
-            paired_conditions = sample_df[paired_col].str.lower().unique()
-            conditions = generate_n_back_conditions(sample_df, include_paired_task=True, paired_task_col=paired_col, paired_conditions=paired_conditions)
+            conditions = [
+                f"{n_back_condition}_{delay}back_{paired_condition}"
+                for n_back_condition in sample_df['n_back_condition'].str.lower().unique()
+                for delay in sample_df['delay'].unique()
+                for paired_condition in sample_df[paired_col].str.lower().unique()
+            ]
         return extend_metric_columns(base_columns, conditions)
     return base_columns  # Return base columns if no sample data available
 
@@ -280,7 +254,11 @@ def get_task_columns(task_name, sample_df=None):
         elif 'n_back' in task_name:
             # For n-back, we need to get the columns from the data
             if sample_df is not None:
-                conditions = generate_n_back_conditions(sample_df)
+                conditions = [
+                    f"{n_back_condition}_{delay}back"
+                    for n_back_condition in sample_df['n_back_condition'].unique()
+                    for delay in sample_df['delay'].unique()
+                ]
                 return extend_metric_columns(base_columns, conditions)
             return base_columns  # Return base columns if no sample data available
         elif 'stop_signal' in task_name:
@@ -563,56 +541,51 @@ def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_cond
     Returns: dict of metrics
     """
     metrics = {}
-    
     if cuedts:
-        # Handle n-back with cued task switching
-        conditions = generate_n_back_conditions(df, include_cuedts=True)
-        for condition in conditions:
-            # Parse condition like "0_1back_tstay_cstay"
-            parts = condition.split('_')
-            if len(parts) >= 4:
-                n_back_condition = parts[0]
-                delay = parts[1].replace('back', '')
-                taskc = parts[2].replace('t', '')
-                cue = parts[3].replace('c', '')
-                
-                mask_acc = (
-                    (df['n_back_condition'].str.lower() == n_back_condition) &
-                    (df['delay'] == float(delay)) &
-                    (df['cue_condition'] == cue) &
-                    (df['task_condition'] == taskc)
-                )
-                calculate_basic_metrics(df, mask_acc, condition, metrics)
-    elif paired_task_col is None:
+        cue_conditions = [c for c in df['cue_condition'].unique() if pd.notna(c) and str(c).lower() != 'na']
+        task_conditions = [t for t in df['task_condition'].unique() if pd.notna(t) and str(t).lower() != 'na']
+        for n_back_condition in df['n_back_condition'].str.lower().unique():
+            if pd.isna(n_back_condition):
+                continue
+            for delay in df['delay'].unique():
+                if pd.isna(delay):
+                    continue
+                for cue in cue_conditions:
+                    for taskc in task_conditions:
+                        if cue == "stay" and taskc == "switch":
+                            continue
+                        col_prefix = f"{n_back_condition}_{delay}back_t{taskc}_c{cue}"
+                        mask_acc = (
+                            (df['n_back_condition'].str.lower() == n_back_condition) &
+                            (df['delay'] == delay) &
+                            (df['cue_condition'] == cue) &
+                            (df['task_condition'] == taskc)
+                        )
+                        calculate_basic_metrics(df, mask_acc, col_prefix, metrics)
+        return metrics
+    if paired_task_col is None:
         # Single n-back: iterate over n_back_condition and delay
-        conditions = generate_n_back_conditions(df)
-        for condition in conditions:
-            # Parse condition like "0_1back"
-            parts = condition.split('_')
-            if len(parts) >= 2:
-                n_back_condition = parts[0]
-                delay = parts[1].replace('back', '')
-                
-                mask_acc = (df['n_back_condition'].str.lower() == n_back_condition) & (df['delay'] == float(delay))
+        for n_back_condition in df['n_back_condition'].str.lower().unique():
+            if pd.isna(n_back_condition):
+                continue
+            for delay in df['delay'].unique():
+                if pd.isna(delay):
+                    continue
+                condition = f"{n_back_condition}_{delay}back"
+                mask_acc = (df['n_back_condition'].str.lower() == n_back_condition) & (df['delay'] == delay)
                 calculate_basic_metrics(df, mask_acc, condition, metrics)
     else:
         # Dual n-back: iterate over n_back_condition, delay, and paired task conditions
-        conditions = generate_n_back_conditions(df, include_paired_task=True, paired_task_col=paired_task_col, paired_conditions=paired_conditions)
-        for condition in conditions:
-            # Parse condition like "0_1back_go"
-            parts = condition.split('_')
-            if len(parts) >= 3:
-                n_back_condition = parts[0]
-                delay = parts[1].replace('back', '')
-                paired_cond = parts[2]
-                
-                mask_acc = (
-                    (df['n_back_condition'].str.lower() == n_back_condition) & 
-                    (df['delay'] == float(delay)) & 
-                    (df[paired_task_col].str.lower() == paired_cond.lower())
-                )
-                calculate_basic_metrics(df, mask_acc, condition, metrics)
-    
+        for n_back_condition in df['n_back_condition'].str.lower().unique():
+            if pd.isna(n_back_condition):
+                continue
+            for delay in df['delay'].unique():
+                if pd.isna(delay):
+                    continue
+                for paired_cond in paired_conditions:
+                    condition = f"{n_back_condition}_{delay}back_{paired_cond.lower()}"
+                    mask_acc = (df['n_back_condition'].str.lower() == n_back_condition) & (df['delay'] == delay) & (df[paired_task_col].str.lower() == paired_cond.lower())
+                    calculate_basic_metrics(df, mask_acc, condition, metrics)
     return metrics
 
 def compute_cued_spatial_task_switching_metrics(df, condition_list):
@@ -856,7 +829,12 @@ def get_task_metrics(df, task_name):
             paired_conditions = [c for c in df['task_switch'].unique() if pd.notna(c) and c != 'na']
             return compute_stop_signal_metrics(df, dual_task=True, paired_task_col='task_switch', paired_conditions=paired_conditions, stim_cols=['number', 'predictable_dimension'])
         elif ('stop_signal' in task_name and 'n_back' in task_name) or ('stopSignal' in task_name and 'NBack' in task_name):
-            paired_conditions = generate_n_back_conditions(df)
+            paired_conditions = []
+            for n_back_condition in df['n_back_condition'].unique():
+                if pd.notna(n_back_condition):
+                    for delay in df['delay'].unique():
+                        if pd.notna(delay):
+                            paired_conditions.append(f"{n_back_condition}_{delay}back")
             return compute_stop_signal_metrics(df, dual_task=True, paired_task_col=None, paired_conditions=paired_conditions, stim_col='n_back_condition')
         elif ('stop_signal' in task_name and 'cued_task_switching' in task_name) or ('stopSignal' in task_name and 'CuedTS' in task_name):
             # Create combined conditions for cued task switching (e.g., "tstay_cstay", "tstay_cswitch")
