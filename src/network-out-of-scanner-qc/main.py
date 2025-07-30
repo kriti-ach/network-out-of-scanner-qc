@@ -35,6 +35,8 @@ for subject_folder in glob.glob(str(folder_path / "s*")):
             # run = Path(file).stem.split('_')[3]
             filename = Path(file).name
             task_name = extract_task_name_out_of_scanner(filename)
+            if task_name == 'stop_signal_with_go_no_go':
+                task_name = 'stop_signal_with_go_nogo'
             # task_name = extract_task_name_fmri(filename)
             print(f"Processing task: {task_name}")
             
