@@ -196,6 +196,9 @@ def get_task_columns(task_name, sample_df=None):
         elif 'flanker' in task_name and 'shape_matching' in task_name:
             conditions = create_dual_task_conditions(FLANKER_CONDITIONS, SHAPE_MATCHING_CONDITIONS)
             return extend_metric_columns(base_columns, conditions)
+        elif 'flanker' in task_name and 'go_nogo' in task_name:
+            conditions = create_dual_task_conditions(FLANKER_CONDITIONS, GO_NOGO_CONDITIONS)
+            return extend_metric_columns(base_columns, conditions)
         elif 'directed_forgetting' in task_name and 'go_nogo' in task_name:
             conditions = create_dual_task_conditions(DIRECTED_FORGETTING_CONDITIONS, GO_NOGO_CONDITIONS)
             return extend_metric_columns(base_columns, conditions)
@@ -364,6 +367,85 @@ def update_qc_csv(output_path, task_name, subject_id, metrics):
     except FileNotFoundError:
         print(f"Warning: QC file {qc_file} not found")
 
+def calculate_accuracy(df, mask_acc):
+    """
+    Calculate accuracy for given mask.
+    
+    Args:
+        df (pd.DataFrame): DataFrame containing task data
+        mask_acc (pd.Series): Boolean mask for accuracy calculation
+        
+    Returns:
+        float: Accuracy (mean of correct_trial)
+    """
+    return df[mask_acc]['correct_trial'].mean() if len(df[mask_acc]) > 0 else np.nan
+
+def calculate_rt(df, mask_rt):
+    """
+    Calculate reaction time for given mask.
+    
+    Args:
+        df (pd.DataFrame): DataFrame containing task data
+        mask_rt (pd.Series): Boolean mask for RT calculation (correct trials only)
+        
+    Returns:
+        float: Mean reaction time
+    """
+    return df[mask_rt]['rt'].mean() if len(df[mask_rt]) > 0 else np.nan
+
+def calculate_omission_rate(df, mask_omission, total_num_trials):
+    """
+    Calculate omission rate for given mask.
+    
+    Args:
+        df (pd.DataFrame): DataFrame containing task data
+        mask_omission (pd.Series): Boolean mask for omission calculation
+        total_num_trials (int): Total number of trials for normalization
+        
+    Returns:
+        float: Omission rate
+    """
+    num_omissions = len(df[mask_omission])
+    return num_omissions / total_num_trials if total_num_trials > 0 else np.nan
+
+def calculate_commission_rate(df, mask_commission, total_num_trials):
+    """
+    Calculate commission rate for given mask.
+    
+    Args:
+        df (pd.DataFrame): DataFrame containing task data
+        mask_commission (pd.Series): Boolean mask for commission calculation
+        total_num_trials (int): Total number of trials for normalization
+        
+    Returns:
+        float: Commission rate
+    """
+    num_commissions = len(df[mask_commission])
+    return num_commissions / total_num_trials if total_num_trials > 0 else np.nan
+
+def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict):
+    """
+    Calculate all basic metrics (accuracy, RT, omission rate, commission rate) for a condition.
+    
+    Args:
+        df (pd.DataFrame): DataFrame containing task data
+        mask_acc (pd.Series): Boolean mask for accuracy calculation
+        cond_name (str): Condition name for metric keys
+        metrics_dict (dict): Dictionary to store metrics
+        
+    Returns:
+        None: Updates metrics_dict in place
+    """
+    mask_rt = mask_acc & (df['correct_trial'] == 1)
+    mask_omission = mask_acc & (df['key_press'] == -1)
+    mask_commission = mask_acc & (df['key_press'] != -1) & (df['correct_trial'] == 0)
+    total_num_trials = len(df[mask_acc])
+    
+    metrics_dict[f'{cond_name}_acc'] = calculate_accuracy(df, mask_acc)
+    metrics_dict[f'{cond_name}_rt'] = calculate_rt(df, mask_rt)
+    metrics_dict[f'{cond_name}_omission_rate'] = calculate_omission_rate(df, mask_omission, total_num_trials)
+    metrics_dict[f'{cond_name}_commission_rate'] = calculate_commission_rate(df, mask_commission, total_num_trials)
+
 def compute_cued_task_switching_metrics(
     df,
     condition_list,
@@ -391,6 +473,7 @@ def compute_cued_task_switching_metrics(
                 cue = cond[cond.index('_c')+2:]
                 mask_acc = (df['task_condition'].apply(lambda x: str(x).lower()) == task) & \
                            (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
+                calculate_basic_metrics(df, mask_acc, cond, metrics)
             elif condition_type == 'flanker':
                 # cond format: {flanker}_t{task}_c{cue}
                 flanker, t_part = cond.split('_t')
@@ -400,6 +483,7 @@ def compute_cued_task_switching_metrics(
                     (df['task_condition'].apply(lambda x: str(x).lower()) == ('switch' if task in ['switch', 'switch_new'] else task)) &
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
+                calculate_basic_metrics(df, mask_acc, cond, metrics)
             elif condition_type == 'go_nogo':
                 # cond format: {go_nogo}_t{task}_c{cue}
                 go_nogo, t_part = cond.split('_t')
@@ -409,6 +493,7 @@ def compute_cued_task_switching_metrics(
                     (df['task_condition'].apply(lambda x: str(x).lower()) == task) &
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
+                calculate_basic_metrics(df, mask_acc, cond, metrics)
             elif condition_type == 'shape_matching':
                 # cond format: {shape_matching}_t{task}_c{cue}
                 shape_matching, t_part = cond.split('_t')
@@ -418,6 +503,7 @@ def compute_cued_task_switching_metrics(
                     (df['task_condition'].apply(lambda x: str(x).lower()) == ('switch' if task in ['switch', 'switch_new'] else task)) &
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
+                calculate_basic_metrics(df, mask_acc, cond, metrics)
             elif condition_type == 'directed_forgetting':
                 # cond format: {directed_forgetting}_t{task}_c{cue}
                 directed_forgetting, t_part = cond.split('_t')
@@ -427,21 +513,12 @@ def compute_cued_task_switching_metrics(
                     (df['task_condition'].apply(lambda x: str(x).lower()) == task) &
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
+                calculate_basic_metrics(df, mask_acc, cond, metrics)
             else:
                 continue
         except Exception as e:
             print(f"Skipping malformed condition: {cond} ({e})")
             continue
-        mask_rt = mask_acc & (df['correct_trial'] == 1)
-        mask_omission = mask_acc & (df['key_press'] == -1)
-        mask_commission = mask_acc & (df['key_press'] != -1) & (df['correct_trial'] == 0)
-        num_omissions = len(df[mask_omission])
-        num_commissions = len(df[mask_commission])
-        total_num_trials = len(df[mask_acc])
-        metrics[f'{cond}_acc'] = df[mask_acc]['correct_trial'].mean()
-        metrics[f'{cond}_rt'] = df[mask_rt]['rt'].mean()
-        metrics[f'{cond}_omission_rate'] = num_omissions / total_num_trials if total_num_trials > 0 else np.nan
-        metrics[f'{cond}_commission_rate'] = num_commissions / total_num_trials if total_num_trials > 0 else np.nan
     return metrics
 
 def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_conditions=None, cuedts=False):
@@ -475,16 +552,7 @@ def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_cond
                             (df['cue_condition'] == cue) &
                             (df['task_condition'] == taskc)
                         )
-                        mask_rt = mask_acc & (df['correct_trial'] == 1)
-                        mask_omission = mask_acc & (df['key_press'] == -1)
-                        mask_commission = mask_acc & (df['key_press'] != -1) & (df['correct_trial'] == 0)
-                        num_omissions = len(df[mask_omission])
-                        num_commissions = len(df[mask_commission])
-                        total_num_trials = len(df[mask_acc])
-                        metrics[f'{col_prefix}_acc'] = df[mask_acc]['correct_trial'].mean()
-                        metrics[f'{col_prefix}_rt'] = df[mask_rt]['rt'].mean()
-                        metrics[f'{col_prefix}_omission_rate'] = num_omissions / total_num_trials if total_num_trials > 0 else np.nan
-                        metrics[f'{col_prefix}_commission_rate'] = num_commissions / total_num_trials if total_num_trials > 0 else np.nan
+                        calculate_basic_metrics(df, mask_acc, col_prefix, metrics)
         return metrics
     if paired_task_col is None:
         # Single n-back: iterate over n_back_condition and delay
@@ -496,9 +564,7 @@ def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_cond
                     continue
                 condition = f"{n_back_condition}_{delay}back"
                 mask_acc = (df['n_back_condition'].str.lower() == n_back_condition) & (df['delay'] == delay)
-                mask_rt = mask_acc & (df['correct_trial'] == 1)
-                metrics[f'{condition}_acc'] = df[mask_acc]['correct_trial'].mean()
-                metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
+                calculate_basic_metrics(df, mask_acc, condition, metrics)
     else:
         # Dual n-back: iterate over n_back_condition, delay, and paired task conditions
         for n_back_condition in df['n_back_condition'].str.lower().unique():
@@ -510,9 +576,7 @@ def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_cond
                 for paired_cond in paired_conditions:
                     condition = f"{n_back_condition}_{delay}back_{paired_cond.lower()}"
                     mask_acc = (df['n_back_condition'].str.lower() == n_back_condition) & (df['delay'] == delay) & (df[paired_task_col].str.lower() == paired_cond.lower())
-                    mask_rt = mask_acc & (df['correct_trial'] == 1)
-                    metrics[f'{condition}_acc'] = df[mask_acc]['correct_trial'].mean()
-                    metrics[f'{condition}_rt'] = df[mask_rt]['rt'].mean()
+                    calculate_basic_metrics(df, mask_acc, condition, metrics)
     return metrics
 
 def compute_cued_spatial_task_switching_metrics(df, condition_list):
@@ -570,16 +634,7 @@ def compute_cued_spatial_task_switching_metrics(df, condition_list):
                 (df['task_condition'] == cued_task) & 
                 (df['task_switch'] == f't{spatial_task}_c{spatial_cue}')
             )
-            mask_rt = mask_acc & (df['correct_trial'] == 1)
-            mask_omission = mask_acc & (df['key_press'] == -1)
-            mask_commission = mask_acc & (df['key_press'] != -1) & (df['correct_trial'] == 0)
-            num_omissions = len(df[mask_omission])
-            num_commissions = len(df[mask_commission])
-            total_num_trials = len(df[mask_acc])
-            metrics[f'{cond}_acc'] = df[mask_acc]['correct_trial'].mean() if len(df[mask_acc]) > 0 else np.nan
-            metrics[f'{cond}_rt'] = df[mask_rt]['rt'].mean() if len(df[mask_rt]) > 0 else np.nan
-            metrics[f'{cond}_omission_rate'] = num_omissions / total_num_trials if total_num_trials > 0 else np.nan
-            metrics[f'{cond}_commission_rate'] = num_commissions / total_num_trials if total_num_trials > 0 else np.nan
+            calculate_basic_metrics(df, mask_acc, cond, metrics)
         except Exception as e:
             print(f"Error parsing condition {cond}: {e}")
             continue
@@ -840,31 +895,13 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task):
             for cond2 in conditions[task2]:
                 mask_acc = df[condition_columns[task1]].str.contains(cond1, case=False, na=False) & \
                            df[condition_columns[task2]].str.contains(cond2, case=False, na=False)
-                mask_rt = mask_acc & (df['correct_trial'] == 1)
-                metrics[f'{cond1}_{cond2}_acc'] = df[mask_acc]['correct_trial'].mean()
-                metrics[f'{cond1}_{cond2}_rt'] = df[mask_rt]['rt'].mean()
-                mask_omission = mask_acc & (df['key_press'] == -1)
-                mask_commission = mask_acc & (df['key_press'] != -1) & (df['correct_trial'] == 0)
-                num_omissions = len(df[mask_omission])
-                num_commissions = len(df[mask_commission])
-                total_num_trials = len(df[mask_acc])
-                metrics[f'{cond1}_{cond2}_omission_rate'] = num_omissions / total_num_trials
-                metrics[f'{cond1}_{cond2}_commission_rate'] = num_commissions / total_num_trials
+                calculate_basic_metrics(df, mask_acc, f'{cond1}_{cond2}', metrics)
     else:
         # For single tasks, just iterate through conditions
         task = list(conditions.keys())[0]
         for cond in conditions[task]:
             mask_acc = (df[condition_columns[task]] == cond)
-            mask_rt = (df[condition_columns[task]] == cond) & (df['correct_trial'] == 1)
-            metrics[f'{cond}_acc'] = df[mask_acc]['correct_trial'].mean()
-            metrics[f'{cond}_rt'] = df[mask_rt]['rt'].mean()
-            mask_omission = (df[condition_columns[task]] == cond) & (df['key_press'] == -1)
-            mask_commission = (df[condition_columns[task]] == cond) & (df['key_press'] != -1) & (df['correct_trial'] == 0)
-            num_omissions = len(df[mask_omission])
-            num_commissions = len(df[mask_commission])
-            total_num_trials = len(df[mask_acc])
-            metrics[f'{cond}_omission_rate'] = num_omissions / total_num_trials
-            metrics[f'{cond}_commission_rate'] = num_commissions / total_num_trials
+            calculate_basic_metrics(df, mask_acc, cond, metrics)
     
     return metrics
 
