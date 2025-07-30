@@ -5,7 +5,7 @@ import sys
 import os
 
 from src.network_out_of_scanner_qc.utils.utils import (
-    calculate_accuracy, calculate_rt, calculate_omission_rate, 
+    calculate_accuracy, calculate_rt, calculate_omission_rate,
     calculate_commission_rate, calculate_basic_metrics
 )
 
