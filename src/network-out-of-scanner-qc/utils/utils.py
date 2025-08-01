@@ -972,8 +972,10 @@ def calculate_single_stop_signal_metrics(df):
     )
 
     # Go omission rate
-    metrics['go_omission_rate'] = len(go_trials[go_trials['key_press'] == -1]) / len(go_trials)
-    metrics['go_commission_rate'] = len(go_trials[go_trials['key_press'] != -1] & (go_trials['correct_trial'] == 0)) / len(go_trials)
+    mask_omission = go_trials['key_press'] == -1
+    mask_commission = go_trials['key_press'] != -1 & (go_trials['correct_trial'] == 0)
+    metrics['go_omission_rate'] = calculate_omission_rate(go_trials, mask_omission, len(go_trials))
+    metrics['go_commission_rate'] = calculate_commission_rate(go_trials, mask_commission, len(go_trials))
 
     stop_fail_with_resp = df[stop_fail_mask & (df['key_press'] != -1)]
     if not stop_fail_with_resp.empty:
@@ -1040,8 +1042,10 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
 
     go_trials = df[go_mask]
     # Go omission rate
-    metrics[f'{paired_cond}_go_omission_rate'] = len(go_trials[go_trials['key_press'] == -1]) / len(go_trials)
-    metrics[f'{paired_cond}_go_commission_rate'] = len(go_trials[go_trials['key_press'] != -1] & (go_trials['correct_trial'] == 0)) / len(go_trials)
+    mask_omission = go_trials['key_press'] == -1
+    mask_commission = go_trials['key_press'] != -1 & (go_trials['correct_trial'] == 0)
+    metrics[f'{paired_cond}_go_omission_rate'] = calculate_omission_rate(go_trials, mask_omission, len(go_trials))
+    metrics[f'{paired_cond}_go_commission_rate'] = calculate_commission_rate(go_trials, mask_commission, len(go_trials))
     
     # Stop failure accuracy based on stimulus-response mapping from go trials
     if stim_col is not None:
