@@ -573,6 +573,7 @@ def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_cond
                 mask_acc = (df['n_back_condition'].str.lower() == n_back_condition) & (df['delay'] == delay)
                 calculate_basic_metrics(df, mask_acc, condition, metrics)
         # Dual n-back: iterate over n_back_condition, delay, and paired task conditions
+    else:
         for n_back_condition in df['n_back_condition'].str.lower().unique():
             if pd.isna(n_back_condition):
                 continue
