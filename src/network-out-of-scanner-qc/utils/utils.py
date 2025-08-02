@@ -78,7 +78,7 @@ def extend_go_nogo_metric_columns(base_columns, conditions):
             columns.extend([f'{cond}_acc', f'{cond}_rt', f'{cond}_omission_rate', f'{cond}_commission_rate'])
     return columns
 
-def get_dual_n_back_columns(base_columns, sample_df, paired_col=None, cuedts=False):
+def get_dual_n_back_columns(base_columns, sample_df, paired_col=None, cuedts=False, gonogo=False):
     """
     Generate columns for dual n-back tasks (n-back paired with another task).
     - base_columns: list of base columns (e.g., ['subject_id'])
@@ -106,6 +106,23 @@ def get_dual_n_back_columns(base_columns, sample_df, paired_col=None, cuedts=Fal
                                 col_prefix = f"{n_back_condition}_{delay}back_t{taskc}_c{cue}"
                                 conditions.append(col_prefix)
             return extend_metric_columns(base_columns, conditions)
+        elif gonogo:
+            for n_back_condition in sample_df['n_back_condition'].str.lower().unique():
+                for delay in sample_df['delay'].unique():
+                    for paired_condition in sample_df[paired_col].str.lower().unique():
+                        if paired_condition == 'nogo':
+                            conditions.extend([
+                                f"{n_back_condition}_{delay}back_{paired_condition}_acc",
+                                f"{n_back_condition}_{delay}back_{paired_condition}_rt"
+                            ])
+                        else:
+                            conditions.extend([
+                                f"{n_back_condition}_{delay}back_{paired_condition}_acc",
+                                f"{n_back_condition}_{delay}back_{paired_condition}_rt",
+                                f"{n_back_condition}_{delay}back_{paired_condition}_omission_rate",
+                                f"{n_back_condition}_{delay}back_{paired_condition}_commission_rate"
+                            ])
+            return extend_go_nogo_metric_columns(base_columns, conditions)
         else:
             conditions = [
                 f"{n_back_condition}_{delay}back_{paired_condition}"
@@ -257,7 +274,7 @@ def get_task_columns(task_name, sample_df=None):
         elif 'directed_forgetting' in task_name and 'cued_task_switching' in task_name or 'directedForgetting' in task_name and 'CuedTS' in task_name:
             return extend_metric_columns(base_columns, CUED_TASK_SWITCHING_WITH_DIRECTED_FORGETTING_CONDITIONS)
         elif 'go_nogo' in task_name and 'n_back' in task_name or 'go_nogo' in task_name and 'NBack' in task_name:
-            return get_dual_n_back_columns(base_columns, sample_df, 'go_nogo_condition')
+            return get_dual_n_back_columns(base_columns, sample_df, 'go_nogo_condition', gonogo=True)
         elif 'flanker' in task_name and 'n_back' in task_name or 'flanker' in task_name and 'NBack' in task_name:
             return get_dual_n_back_columns(base_columns, sample_df, 'flanker_condition')
         elif 'shape_matching' in task_name and 'n_back' in task_name or 'shape_matching' in task_name and 'NBack' in task_name:
@@ -592,7 +609,7 @@ def compute_cued_task_switching_metrics(
             continue
     return metrics
 
-def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_conditions=None, cuedts=False):
+def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_conditions=None, cuedts=False, gonogo=False):
     """
     Compute metrics for n-back tasks (single, dual, or n-back with cuedts).
     - df: DataFrame
@@ -600,6 +617,7 @@ def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_cond
     - paired_task_col: column name for the paired task (if dual)
     - paired_conditions: list of paired task conditions (if dual)
     - cuedts: if True, handle n-back with cued task switching
+    - gonogo: if True, handle n-back with go_nogo task switching
     Returns: dict of metrics
     """
     metrics = {}
@@ -624,6 +642,14 @@ def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_cond
                             (df['task_condition'] == taskc)
                         )
                         calculate_basic_metrics(df, mask_acc, col_prefix, metrics)
+        return metrics
+    elif gonogo:
+        for n_back_condition in df['n_back_condition'].str.lower().unique():
+            for delay in df['delay'].unique():
+                for paired_condition in paired_conditions:
+                    col_prefix = f"{n_back_condition}_{delay}back_{paired_condition}"
+                    mask_acc = (df['n_back_condition'].str.lower() == n_back_condition) & (df['delay'] == delay) & (df[paired_task_col].str.lower() == paired_condition.lower())
+                    calculate_go_nogo_metrics(df, mask_acc, col_prefix, metrics)
         return metrics
     if paired_task_col is None:
         # Single n-back: iterate over n_back_condition and delay
@@ -850,7 +876,7 @@ def get_task_metrics(df, task_name):
         elif ('n_back' in task_name and 'go_nogo' in task_name) or ('NBack' in task_name and 'go_nogo' in task_name):
             # Example: dual n-back with go_nogo
             paired_conditions = [c for c in df['go_nogo_condition'].unique() if pd.notna(c)]
-            return compute_n_back_metrics(df, None, paired_task_col='go_nogo_condition', paired_conditions=paired_conditions)
+            return compute_n_back_metrics(df, None, paired_task_col='go_nogo_condition', paired_conditions=paired_conditions, gonogo=True)
         elif ('n_back' in task_name and 'flanker' in task_name) or ('NBack' in task_name and 'flanker' in task_name):
             paired_conditions = [c for c in df['flanker_condition'].unique() if pd.notna(c)]
             return compute_n_back_metrics(df, None, paired_task_col='flanker_condition', paired_conditions=paired_conditions)
