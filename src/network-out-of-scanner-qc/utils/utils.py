@@ -1175,7 +1175,7 @@ def compute_stop_signal_metrics(df, dual_task = False, paired_task_col=None, pai
         
         return metrics
 
-def get_go_trials_rt(df, max_go_rt=2):
+def get_go_trials_rt(df, max_go_rt=2000):
     """
     Get sorted go trial reaction times with replacement for missing values.
     
@@ -1186,9 +1186,6 @@ def get_go_trials_rt(df, max_go_rt=2):
     Returns:
         pd.Series: Sorted go trial RTs
     """
-    # Only use test phase if present
-    if 'Phase' in df.columns:
-        df = df.query('Phase == "test"')
     go_trials = df[df['SS_trial_type'] == 'go']
     
     go_replacement_df = go_trials.copy()
@@ -1205,9 +1202,6 @@ def get_stop_trials_info(df):
     Returns:
         tuple: (p_respond, avg_SSD) where p_respond is probability of responding on stop trials
     """
-    # Only use test phase if present
-    if 'Phase' in df.columns:
-        df = df.query('Phase == "test"')
     stop_df = df[df['SS_trial_type'] == 'stop']
     
     if len(stop_df) == 0:
@@ -1242,7 +1236,7 @@ def get_nth_rt(sorted_go_rt, p_respond):
     else:
         return sorted_go_rt.iloc[nth_index]
 
-def compute_SSRT(df, max_go_rt=2):
+def compute_SSRT(df, max_go_rt=2000):
     """
     Compute Stop Signal Reaction Time (SSRT).
     
