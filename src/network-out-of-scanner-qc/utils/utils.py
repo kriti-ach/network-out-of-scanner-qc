@@ -1127,19 +1127,19 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
     
     go_mask = (df['SS_trial_type'] == 'go') & paired_mask
     stop_mask = (df['SS_trial_type'] == 'stop') & paired_mask
-    stop_fail_mask = stop_mask & (df['correct_trial'] == 0)
-    stop_succ_mask = stop_mask & (df['correct_trial'] == 1)
+    stop_fail_mask = stop_mask & (df['key_press'] != -1)
+    stop_succ_mask = stop_mask & (df['key_press'] == -1)
 
     # RTs
     metrics[f'{paired_cond}_go_rt'] = df.loc[go_mask & (df['rt'].notna()), 'rt'].mean()
     metrics[f'{paired_cond}_stop_fail_rt'] = df.loc[stop_fail_mask & (df['rt'].notna()) & (df['rt'] > 0), 'rt'].mean()
 
     # Accuracies
-    metrics[f'{paired_cond}_go_acc'] = df.loc[go_mask, 'correct_trial'].mean()
+    metrics[f'{paired_cond}_go_acc'] = df.loc[go_mask, df['key_press'] == df['correct_response']].mean()
     go_trials = df[go_mask]
     # Go omission rate
     mask_omission = go_mask & (df['key_press'] == -1)
-    mask_commission = go_mask & (df['key_press'] != -1) & (df['correct_trial'] == 0)
+    mask_commission = go_mask & (df['key_press'] != -1) & (df['key_press'] != df['correct_response'])
     metrics[f'{paired_cond}_go_omission_rate'] = calculate_omission_rate(df, mask_omission, len(go_trials))
     metrics[f'{paired_cond}_go_commission_rate'] = calculate_commission_rate(df, mask_commission, len(go_trials))
     
@@ -1187,27 +1187,6 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
         metrics[f'{paired_cond}_stop_fail_acc'] = np.nan
 
     metrics[f'{paired_cond}_stop_success'] = len(df[stop_succ_mask])/len(df[stop_mask]) if len(df[stop_mask]) > 0 else np.nan
-    # debug stop_fail_acc
-    if stim_cols != []:
-        print(f'  DEBUG go_acc: {metrics[f"{paired_cond}_go_acc"]}')
-        print(f'  Total go trials: {go_mask.sum()}')
-        go_trials_for_acc = df[go_mask]
-        print(f'  correct_trial values for go trials: {go_trials_for_acc["correct_trial"].value_counts().to_dict()}')
-        print(f'  correct_trial mean: {go_trials_for_acc["correct_trial"].mean()}')
-        # Check if there are any go trials with correct_trial = 0
-        incorrect_go_trials = go_trials_for_acc[go_trials_for_acc['correct_trial'] == 0]
-        if len(incorrect_go_trials) > 0:
-            print(f'  WARNING: Found {len(incorrect_go_trials)} go trials with correct_trial = 0')
-            print(f'    These trials: {incorrect_go_trials[["SS_trial_type", "correct_trial", "rt", "key_press"]].to_dict("records")}')
-        
-        # Check if there are any go trials with missing correct_trial
-        missing_correct_trials = go_trials_for_acc[go_trials_for_acc['correct_trial'].isna()]
-        if len(missing_correct_trials) > 0:
-            print(f'  WARNING: Found {len(missing_correct_trials)} go trials with missing correct_trial')
-            print(f'    These trials: {missing_correct_trials[["SS_trial_type", "correct_trial", "rt", "key_press"]].to_dict("records")}')
-        print(f'  number of stop trials: {len(df[stop_mask])}')
-        print(f'  number of successful stop trials: {len(df[stop_succ_mask])}')
-        print(f'  stop_success: {metrics[f"{paired_cond}_stop_success"]}')
     
     return metrics
 
