@@ -1259,7 +1259,7 @@ def compute_stop_signal_metrics(df, dual_task = False, paired_task_col=None, pai
                 
             paired_mask = mask_func(df)
 
-            if stim_cols is not None:
+            if stim_cols != []:
                 print(f'stim_cols: {stim_cols}')
                 print(f'paired_mask: {paired_mask}')
             
