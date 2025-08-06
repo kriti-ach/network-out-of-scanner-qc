@@ -1360,14 +1360,15 @@ def compute_SSRT(df, condition_mask=None, max_go_rt=2000):
     
     # Get nth RT
     nth_rt = get_nth_rt(sorted_go_rt, p_respond)
+
+    if condition_mask is not None:
+        print(f'DEBUG {condition_mask} - SSRT:')
+        print(f'  nth_rt: {nth_rt}')
+        print(f'  avg_SSD: {avg_SSD}')
+        print(f'  SSRT: {nth_rt - avg_SSD}')
     
     # Calculate SSRT
     if avg_SSD is not None and not np.isnan(avg_SSD) and not np.isnan(nth_rt):
         return nth_rt - avg_SSD
     else:
         return np.nan
-    
-    if condition_mask is not None:
-        print(f'nth_rt: {nth_rt}')
-        print(f'avg_SSD: {avg_SSD}')
-        print(f'SSRT: {nth_rt - avg_SSD}')
