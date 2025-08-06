@@ -1136,6 +1136,9 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
 
     # Accuracies
     metrics[f'{paired_cond}_go_acc'] = df.loc[go_mask, 'correct_trial'].mean()
+    # debug go_acc
+    if stim_cols != []:
+        print(f'go_acc: {metrics[f"{paired_cond}_go_acc"]}')
 
     go_trials = df[go_mask]
     # Go omission rate
