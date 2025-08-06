@@ -1366,3 +1366,8 @@ def compute_SSRT(df, condition_mask=None, max_go_rt=2000):
         return nth_rt - avg_SSD
     else:
         return np.nan
+    
+    if condition_mask is not None:
+        print(f'nth_rt: {nth_rt}')
+        print(f'avg_SSD: {avg_SSD}')
+        print(f'SSRT: {nth_rt - avg_SSD}')
