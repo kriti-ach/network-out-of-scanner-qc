@@ -1133,7 +1133,6 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
     # RTs
     metrics[f'{paired_cond}_go_rt'] = df.loc[go_mask & (df['rt'].notna()), 'rt'].mean()
     metrics[f'{paired_cond}_stop_fail_rt'] = df.loc[stop_fail_mask & (df['rt'].notna()), 'rt'].mean()
-    print(f'stop_fail_mask: {stop_fail_mask}')
     print(f'{paired_cond}_stop_fail_rt: {metrics[f"{paired_cond}_stop_fail_rt"]}')
 
     # Accuracies
@@ -1259,6 +1258,10 @@ def compute_stop_signal_metrics(df, dual_task = False, paired_task_col=None, pai
                 continue
                 
             paired_mask = mask_func(df)
+
+            if stim_cols is not None:
+                print(f'stim_cols: {stim_cols}')
+                print(f'paired_mask: {paired_mask}')
             
             # Calculate metrics for this condition
             condition_metrics = calculate_dual_stop_signal_condition_metrics(
