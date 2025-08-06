@@ -1341,7 +1341,7 @@ def get_nth_rt(sorted_go_rt, p_respond):
     else:
         return sorted_go_rt.iloc[nth_index]
 
-def compute_SSRT(df, condition_mask=None, max_go_rt=2000, stim_cols=None):
+def compute_SSRT(df, condition_mask=None, max_go_rt=2000, stim_cols=[]):
     """
     Compute Stop Signal Reaction Time (SSRT).
     
@@ -1360,7 +1360,7 @@ def compute_SSRT(df, condition_mask=None, max_go_rt=2000, stim_cols=None):
     
     # Get nth RT
     nth_rt = get_nth_rt(sorted_go_rt, p_respond)
-    if stim_cols is not None:
+    if stim_cols != []:
         print(f'  nth_rt: {nth_rt}')
         print(f'  avg_SSD: {avg_SSD}')
         print(f'  SSRT: {nth_rt - avg_SSD}')
