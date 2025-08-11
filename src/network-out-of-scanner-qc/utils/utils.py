@@ -1054,8 +1054,8 @@ def calculate_single_stop_signal_metrics(df):
     stop_succ_mask = stop_mask & (df['correct_trial'] == 1)
 
     # RTs
-    metrics['go_rt'] = df.loc[go_mask & (df['rt'].notna()), 'rt'].mean()
-    metrics['stop_fail_rt'] = df.loc[stop_fail_mask & (df['rt'].notna()), 'rt'].mean()
+    metrics['go_rt'] = df.loc[go_mask & (df['rt'].notna()) & (df['rt'] > 0), 'rt'].mean()
+    metrics['stop_fail_rt'] = df.loc[stop_fail_mask & (df['rt'].notna()) & (df['rt'] > 0), 'rt'].mean()
 
     # Accuracies
     metrics['go_acc'] = df.loc[go_mask, 'correct_trial'].mean()
