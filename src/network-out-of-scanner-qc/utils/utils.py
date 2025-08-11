@@ -1276,7 +1276,7 @@ def compute_stop_signal_metrics(df, dual_task = False, paired_task_col=None, pai
         
         return metrics
 
-def get_go_trials_rt(df, max_go_rt=2000):
+def get_go_trials_rt(df, max_go_rt=2000, condition_mask=None):
     """
     Get sorted go trial reaction times with replacement for missing values.
     
@@ -1287,7 +1287,10 @@ def get_go_trials_rt(df, max_go_rt=2000):
     Returns:
         pd.Series: Sorted go trial RTs
     """
-    go_trials = df[df['SS_trial_type'] == 'go']
+    if condition_mask is not None:
+        go_trials = df[(df['SS_trial_type'] == 'go') & condition_mask]
+    else:
+        go_trials = df[df['SS_trial_type'] == 'go']
     
     go_replacement_df = go_trials.copy()
     # Replace both NaN and -1 values with max_go_rt
@@ -1353,17 +1356,13 @@ def compute_SSRT(df, condition_mask=None, max_go_rt=2000, stim_cols=[]):
         float: SSRT value
     """
     # Get go trial RTs
-    sorted_go_rt = get_go_trials_rt(df, max_go_rt)
+    sorted_go_rt = get_go_trials_rt(df, max_go_rt, condition_mask)
     
     # Get stop trial information
     p_respond, avg_SSD = get_stop_trials_info(df, condition_mask, stim_cols)
     
     # Get nth RT
     nth_rt = get_nth_rt(sorted_go_rt, p_respond)
-    if stim_cols != []:
-        print(f'  nth_rt: {nth_rt}')
-        print(f'  avg_SSD: {avg_SSD}')
-        print(f'  SSRT: {nth_rt - avg_SSD}')
     # Calculate SSRT
     if avg_SSD is not None and not np.isnan(avg_SSD) and not np.isnan(nth_rt):
         return nth_rt - avg_SSD
