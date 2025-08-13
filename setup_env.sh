@@ -7,4 +7,4 @@ uv sync --dev
 source .venv/bin/activate
 
 # Run main
-uv run main
+uv run src/network-out-of-scanner-qc/main.py
