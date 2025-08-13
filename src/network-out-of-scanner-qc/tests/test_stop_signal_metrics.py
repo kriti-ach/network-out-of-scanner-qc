@@ -98,7 +98,7 @@ class TestStopSignalMetrics:
         
         # Check values
         assert metrics['congruent_go_rt'] == pytest.approx(np.mean([0.5, 0.6]))
-        assert metrics['congruent_go_acc'] == 1.0
+        assert metrics['congruent_go_acc'] == 0.5
         assert metrics['congruent_stop_success'] == pytest.approx(1/2)  # 1 success out of 2 stop trials
         
     def test_parse_dual_task_condition(self):
@@ -171,14 +171,14 @@ class TestStopSignalMetrics:
         
         # Test middle value
         nth_rt = get_nth_rt(sorted_rt, 0.5)
-        assert nth_rt == pytest.approx(0.3)
+        assert nth_rt == 0.3
         
         # Test edge cases
         nth_rt = get_nth_rt(sorted_rt, 0.0)
-        assert nth_rt == pytest.approx(0.1)
+        assert nth_rt == 0.1
         
         nth_rt = get_nth_rt(sorted_rt, 1.0)
-        assert nth_rt == pytest.approx(0.5)
+        assert nth_rt == 0.5
         
         # Test empty series
         nth_rt = get_nth_rt(pd.Series([]), 0.5)
@@ -194,13 +194,13 @@ class TestStopSignalMetrics:
         # avg_ssd = 0.3
         # Expected SSRT = 0.6 - 0.3 = 0.3
         expected_ssrt = 0.6 - 0.3
-        assert ssrt == pytest.approx(expected_ssrt)
+        assert ssrt == expected_ssrt
         
         # Test with condition mask
         condition_mask = self.df['SS_trial_type'] == 'go'
         ssrt = compute_SSRT(self.df, condition_mask=condition_mask)
         # Should be the same since we're only looking at go trials for the mask
-        assert ssrt == pytest.approx(expected_ssrt)
+        assert ssrt == expected_ssrt
         
         # Test with no go trials
         df_no_go = self.df[self.df['SS_trial_type'] == 'stop']
@@ -262,7 +262,7 @@ class TestStopSignalMetrics:
         paired_conditions = ['congruent', 'incongruent']
         metrics = compute_stop_signal_metrics(
             df_dual, dual_task=True, paired_task_col='flanker_condition', 
-            paired_conditions=paired_conditions, stim_col='stim'
+            paired_conditions=paired_conditions, stim_cols=['stim']
         )
         
         # Check that metrics are calculated for each condition

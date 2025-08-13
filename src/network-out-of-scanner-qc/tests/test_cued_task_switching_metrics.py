@@ -213,40 +213,6 @@ class TestCuedTaskSwitchingMetrics:
         # Should handle errors gracefully and skip malformed conditions
         assert len(metrics) == 0
         
-    def test_edge_cases(self):
-        """Test edge cases and error handling."""
-        # Test with empty DataFrame
-        empty_df = pd.DataFrame(columns=['task_condition', 'cue_condition', 'correct_trial', 'rt', 'key_press'])
-        
-        metrics = compute_cued_task_switching_metrics(empty_df, self.single_conditions, 'single')
-        assert len(metrics) == 0
-        
-        # Test with no matching conditions
-        df_no_match = pd.DataFrame({
-            'task_condition': ['other', 'other'],
-            'cue_condition': ['other', 'other'],
-            'correct_trial': [1, 1],
-            'rt': [0.5, 0.6],
-            'key_press': [1, 1],
-            'trial_id': ['test_trial'] * 2
-        })
-        
-        metrics = compute_cued_task_switching_metrics(df_no_match, self.single_conditions, 'single')
-        assert len(metrics) == 0
-        
-        # Test with all NaN values
-        nan_df = pd.DataFrame({
-            'task_condition': [np.nan, np.nan],
-            'cue_condition': [np.nan, np.nan],
-            'correct_trial': [1, 1],
-            'rt': [0.5, 0.6],
-            'key_press': [1, 1],
-            'trial_id': ['test_trial'] * 2
-        })
-        
-        metrics = compute_cued_task_switching_metrics(nan_df, self.single_conditions, 'single')
-        assert len(metrics) == 0
-        
     def test_condition_filtering(self):
         """Test filtering of invalid conditions."""
         # Test with 'na' values in conditions

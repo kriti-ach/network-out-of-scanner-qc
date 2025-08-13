@@ -71,7 +71,7 @@ class TestBasicMetrics:
             'key_press': [1, -1, 1, -1, 1],  # 2 omissions
             'condition': ['A', 'A', 'A', 'A', 'A']
         })
-        mask_a = df_with_omissions['condition'] == 'A'
+        mask_a = df_with_omissions['key_press'] == -1
         
         omission_rate = calculate_omission_rate(df_with_omissions, mask_a, total_num_trials=5)
         assert omission_rate == 0.4  # 2 omissions / 5 trials
@@ -82,7 +82,7 @@ class TestBasicMetrics:
             'key_press': [1, 1, 1],
             'condition': ['A', 'A', 'A']
         })
-        mask_a = df_no_omissions['condition'] == 'A'
+        mask_a = df_no_omissions['key_press'] == -1
         
         omission_rate = calculate_omission_rate(df_no_omissions, mask_a, total_num_trials=3)
         assert omission_rate == 0.0
@@ -99,7 +99,7 @@ class TestBasicMetrics:
             'key_press': [1, 2, 1, 2, 1],  # 2 commissions (incorrect responses)
             'condition': ['A', 'A', 'A', 'A', 'A']
         })
-        mask_a = df_with_commissions['condition'] == 'A'
+        mask_a = df_with_commissions['correct_trial'] == 0
         
         commission_rate = calculate_commission_rate(df_with_commissions, mask_a, total_num_trials=5)
         assert commission_rate == 0.4  # 2 commissions / 5 trials
@@ -110,7 +110,7 @@ class TestBasicMetrics:
             'key_press': [1, 1, 1],
             'condition': ['A', 'A', 'A']
         })
-        mask_a = df_no_commissions['condition'] == 'A'
+        mask_a = df_no_commissions['correct_trial'] == 0
         
         commission_rate = calculate_commission_rate(df_no_commissions, mask_a, total_num_trials=3)
         assert commission_rate == 0.0
@@ -181,12 +181,15 @@ class TestBasicMetrics:
             'rt': [0.5, 0.6, 0.7],
             'key_press': [1, -1, 2]  # Mix of correct, omission, commission
         })
-        mixed_mask = pd.Series([True, True, True])
+        mask_accuracy = mixed_df['correct_trial'] == 1
+        mask_rt = mixed_df['rt'] > 0
+        mask_omission = mixed_df['key_press'] == -1
+        mask_commission = mixed_df['correct_trial'] == 0
         
-        acc = calculate_accuracy(mixed_df, mixed_mask)
-        rt = calculate_rt(mixed_df, mixed_mask)
-        omission = calculate_omission_rate(mixed_df, mixed_mask, 3)
-        commission = calculate_commission_rate(mixed_df, mixed_mask, 3)
+        acc = calculate_accuracy(mixed_df, mask_accuracy)
+        rt = calculate_rt(mixed_df, mask_rt)
+        omission = calculate_omission_rate(mixed_df, mask_omission, 3)
+        commission = calculate_commission_rate(mixed_df, mask_commission, 3)
         
         assert acc == 2/3  # 2 correct out of 3
         assert rt == pytest.approx(0.6)  # Mean of correct trials (0.5, 0.7)
