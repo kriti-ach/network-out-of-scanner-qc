@@ -171,7 +171,7 @@ class TestBasicMetrics:
             'rt': [0.5, 0.6, 0.7],
             'key_press': [1, -1, 2]  # Mix of correct, omission, commission
         })
-        mask_accuracy = mixed_df['correct_trial'] == 1 or mixed_df['correct_trial'] == 0
+        mask_accuracy = mixed_df['correct_trial'] >= 0
         mask_rt = mixed_df['rt'] > 0
         mask_omission = mixed_df['key_press'] == -1
         mask_commission = mixed_df['correct_trial'] == 0

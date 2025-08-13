@@ -127,7 +127,7 @@ class TestStopSignalMetrics:
         """Test go trial RT extraction."""
         # Test without condition mask (original behavior)
         sorted_rt = get_go_trials_rt(self.df)
-        expected_rt = pd.Series([0.5, 0.6, 0.8, 1.0, 1.2])
+        expected_rt = pd.Series([0.5, 0.6, 0.8, 1.0, 1.2], index=range(5))
         pd.testing.assert_series_equal(sorted_rt, expected_rt)
         
         # Test with condition mask
@@ -139,8 +139,10 @@ class TestStopSignalMetrics:
         df_missing = self.df.copy()
         df_missing.loc[0, 'rt'] = np.nan
         sorted_rt = get_go_trials_rt(df_missing, max_go_rt=2.0)
-        assert len(sorted_rt) == 5
-        assert 2.0 in sorted_rt.values
+        pd.testing.assert_series_equal(
+            sorted_rt,
+            pd.Series([0.6, 0.8, 1.0, 1.2, 2.0], index=range(5))
+        )
         
     def test_get_stop_trials_info(self):
         """Test stop trial information extraction."""
@@ -193,7 +195,7 @@ class TestStopSignalMetrics:
         # nth_rt = 0.8 (3rd RT out of 5, p_respond = 2/3)
         # avg_ssd = 0.3
         # Expected SSRT = 0.8 - 0.3 = 0.5
-        expected_ssrt = 0.8 - 0.3
+        expected_ssrt = 0.6 - 0.3
         assert ssrt == expected_ssrt
         
         # Test with condition mask

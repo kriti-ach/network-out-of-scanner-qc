@@ -1295,7 +1295,7 @@ def get_go_trials_rt(df, max_go_rt=2000, condition_mask=None):
     go_replacement_df = go_trials.copy()
     # Replace both NaN and -1 values with max_go_rt
     go_replacement_df['rt'] = go_replacement_df['rt'].replace([np.nan, -1], max_go_rt)
-    return go_replacement_df['rt'].sort_values(ascending=True, ignore_index=True)
+    return go_replacement_df['rt'].sort_values(ascending=True)
 
 def get_stop_trials_info(df, condition_mask=None, stim_cols=None):
     """
