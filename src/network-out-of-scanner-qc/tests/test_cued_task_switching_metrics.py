@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import pytest
-from src.network_out_of_scanner_qc.utils.utils import (
+from utils.utils import (
     compute_cued_task_switching_metrics,
     compute_cued_spatial_task_switching_metrics
 )

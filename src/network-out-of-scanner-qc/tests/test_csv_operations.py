@@ -4,7 +4,7 @@ import pytest
 import tempfile
 import os
 from pathlib import Path
-from src.network_out_of_scanner_qc.utils.utils import (
+from utils.utils import (
     update_qc_csv,
     append_summary_rows_to_csv,
     initialize_qc_csvs,

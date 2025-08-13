@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import pytest
-from src.network_out_of_scanner_qc.utils.utils import (
+from utils.utils import (
     generate_n_back_conditions,
     get_dual_n_back_columns,
     compute_n_back_metrics

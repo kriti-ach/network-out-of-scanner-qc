@@ -4,7 +4,7 @@ import pytest
 import sys
 import os
 
-from network_out_of_scanner_qc.utils.utils import (
+from utils.utils import (
     calculate_accuracy, calculate_rt, calculate_omission_rate, 
     calculate_commission_rate, calculate_basic_metrics
 )

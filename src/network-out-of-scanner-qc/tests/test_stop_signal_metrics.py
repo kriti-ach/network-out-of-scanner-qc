@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import pytest
-from src.network_out_of_scanner_qc.utils.utils import (
+from utils.utils import (
     calculate_single_stop_signal_metrics,
     calculate_stop_signal_ssd_stats,
     calculate_dual_stop_signal_condition_metrics,

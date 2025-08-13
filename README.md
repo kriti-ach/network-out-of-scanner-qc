@@ -27,9 +27,9 @@ source setup_env.sh
         - /utils: 
             * [utils.py]: Helper functions to condense `main.py` script.
             * [globals.py]: Contains the global variables, including the task names and dual task conditions.
-- /tests:
-    - Contains tests for major functions.
-    - Run tests using `uv run pytest`
+        - /tests:
+            - Contains tests for major functions.
+            - Run tests using `uv run pytest`
 
 ## Notes
 
