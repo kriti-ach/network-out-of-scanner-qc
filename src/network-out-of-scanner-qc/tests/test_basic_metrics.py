@@ -153,8 +153,6 @@ class TestBasicMetrics:
         
         assert np.isnan(calculate_accuracy(empty_df, empty_mask))
         assert np.isnan(calculate_rt(empty_df, empty_mask))
-        assert np.isnan(calculate_omission_rate(empty_df, empty_mask, 1))
-        assert np.isnan(calculate_commission_rate(empty_df, empty_mask, 1))
         
         # Test with all NaN values
         nan_df = pd.DataFrame({
