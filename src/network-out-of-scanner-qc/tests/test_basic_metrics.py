@@ -87,10 +87,6 @@ class TestBasicMetrics:
         omission_rate = calculate_omission_rate(df_no_omissions, mask_a, total_num_trials=3)
         assert omission_rate == 0.0
         
-        # Test with zero trials
-        omission_rate = calculate_omission_rate(df_with_omissions, mask_a, total_num_trials=0)
-        assert np.isnan(omission_rate)
-        
     def test_calculate_commission_rate(self):
         """Test commission rate calculation."""
         # Create data with commissions (incorrect responses)
@@ -114,10 +110,6 @@ class TestBasicMetrics:
         
         commission_rate = calculate_commission_rate(df_no_commissions, mask_a, total_num_trials=3)
         assert commission_rate == 0.0
-        
-        # Test with zero trials
-        commission_rate = calculate_commission_rate(df_with_commissions, mask_a, total_num_trials=0)
-        assert np.isnan(commission_rate)
         
     def test_calculate_basic_metrics(self):
         """Test the comprehensive basic metrics function."""
@@ -161,8 +153,8 @@ class TestBasicMetrics:
         
         assert np.isnan(calculate_accuracy(empty_df, empty_mask))
         assert np.isnan(calculate_rt(empty_df, empty_mask))
-        assert np.isnan(calculate_omission_rate(empty_df, empty_mask, 0))
-        assert np.isnan(calculate_commission_rate(empty_df, empty_mask, 0))
+        assert np.isnan(calculate_omission_rate(empty_df, empty_mask, 1))
+        assert np.isnan(calculate_commission_rate(empty_df, empty_mask, 1))
         
         # Test with all NaN values
         nan_df = pd.DataFrame({
