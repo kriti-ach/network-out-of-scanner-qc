@@ -1160,6 +1160,7 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
                 stop_fail_with_resp['expected_response'] = stop_fail_with_resp[stim_col].map(stim_to_resp)
                 stop_fail_with_resp['is_correct'] = stop_fail_with_resp['key_press'] == stop_fail_with_resp['expected_response']
                 if stim_col == 'go_nogo_condition':
+                    print(stim_to_resp)
                     for index, row in stop_fail_with_resp.iterrows():
                         if row['expected_response'] != row['key_press']:
                             print('stim', row['stim'])
