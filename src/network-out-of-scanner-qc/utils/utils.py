@@ -574,6 +574,7 @@ def compute_cued_task_switching_metrics(
                     (df['task_condition'].apply(lambda x: str(x).lower()) == ('switch' if task in ['switch', 'switch_new'] else task)) &
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
+                print(df['task_condition'].unique())
                 calculate_basic_metrics(df, mask_acc, cond, metrics)
             elif condition_type == 'go_nogo':
                 # cond format: {go_nogo}_t{task}_c{cue}
@@ -1159,15 +1160,6 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
                 stop_fail_with_resp = stop_fail_with_resp.copy()
                 stop_fail_with_resp['expected_response'] = stop_fail_with_resp[stim_col].map(stim_to_resp)
                 stop_fail_with_resp['is_correct'] = stop_fail_with_resp['key_press'] == stop_fail_with_resp['expected_response']
-                if stim_col == 'go_nogo_condition':
-                    print(stim_to_resp)
-                    for index, row in stop_fail_with_resp.iterrows():
-                        if row['expected_response'] != row['key_press']:
-                            print('stim', row['stim'])
-                            print('go_nogo_condition', row['go_nogo_condition'])
-                            print('correct_response', row['correct_response'])
-                            print('expected_response', row['expected_response'])
-                            print('key_press', row['key_press'])
                 metrics[f'{paired_cond}_stop_fail_acc'] = stop_fail_with_resp['is_correct'].mean()
             else:
                 metrics[f'{paired_cond}_stop_fail_acc'] = np.nan
