@@ -900,7 +900,7 @@ def get_task_metrics(df, task_name):
         elif ('stop_signal' in task_name and 'go_nogo' in task_name) or ('stopSignal' in task_name and 'go_nogo' in task_name):
             # Only process 'go' condition, not 'nogo'
             paired_conditions = ['go']  # Only process go condition
-            metrics = compute_stop_signal_metrics(df, dual_task=True, paired_task_col='go_nogo_condition', paired_conditions=paired_conditions, stim_col='go_nogo_condition')
+            metrics = compute_stop_signal_metrics(df, dual_task=True, paired_task_col='go_nogo_condition', paired_conditions=paired_conditions, stim_col='stim')
             
             # Calculate nogo commission rate separately
             nogo_mask = (df['go_nogo_condition'] == 'nogo')
