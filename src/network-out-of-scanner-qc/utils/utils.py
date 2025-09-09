@@ -1153,14 +1153,16 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
                 .agg(lambda x: x.value_counts().idxmax())
                 .to_dict()
             )
-            if stim_col == 'go_nogo_condition':
-                print(stim_to_resp)
 
             stop_fail_with_resp = df[stop_fail_mask & (df['key_press'] != -1)]
             if not stop_fail_with_resp.empty:
                 stop_fail_with_resp = stop_fail_with_resp.copy()
                 stop_fail_with_resp['expected_response'] = stop_fail_with_resp[stim_col].map(stim_to_resp)
                 stop_fail_with_resp['is_correct'] = stop_fail_with_resp['key_press'] == stop_fail_with_resp['expected_response']
+                if stim_col == 'go_nogo_condition':
+                    print('expected_response', stop_fail_with_resp['expected_response'])
+                    print('key_press', stop_fail_with_resp['key_press'])
+                    print('is_correct', stop_fail_with_resp['is_correct'])
                 metrics[f'{paired_cond}_stop_fail_acc'] = stop_fail_with_resp['is_correct'].mean()
             else:
                 metrics[f'{paired_cond}_stop_fail_acc'] = np.nan
