@@ -1146,48 +1146,83 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
     metrics[f'{paired_cond}_go_commission_rate'] = calculate_commission_rate(df, mask_commission, len(go_trials))
     
     # Stop failure accuracy based on stimulus-response mapping from go trials
+    # DEBUG block for stop+go_nogo mapping
+    print(f'[{paired_cond}] DEBUG: go_trials={len(go_trials)}, stop_fail_trials={(stop_fail_mask).sum()}')
+    if 'go_nogo_condition' in df.columns:
+        print(f'[{paired_cond}] DEBUG: Detected go_nogo column present')
+    print(f'[{paired_cond}] DEBUG: go_mask sum={go_mask.sum()}, stop_mask sum={stop_mask.sum()}')
     if stim_col is not None:
+        print(f'[{paired_cond}] DEBUG: Using stim_col="{stim_col}" for mapping')
         if not go_trials.empty:
+            try:
+                print(f'[{paired_cond}] DEBUG: go_trials sample\n{go_trials[[stim_col, "correct_response", "key_press"]].head()}')
+            except Exception as e:
+                print(f'[{paired_cond}] DEBUG: go_trials preview error: {e}')
             stim_to_resp = (
                 go_trials.groupby(stim_col)['correct_response']
                 .agg(lambda x: x.value_counts().idxmax())
                 .to_dict()
             )
+            print(f'[{paired_cond}] DEBUG: stim_to_resp (size={len(stim_to_resp)}): {stim_to_resp}')
 
             stop_fail_with_resp = df[stop_fail_mask & (df['key_press'] != -1)]
+            print(f'[{paired_cond}] DEBUG: stop_fail_with_resp rows={len(stop_fail_with_resp)}')
             if not stop_fail_with_resp.empty:
                 stop_fail_with_resp = stop_fail_with_resp.copy()
+                try:
+                    print(f'[{paired_cond}] DEBUG: stop_fail sample before map\n{stop_fail_with_resp[[stim_col, "key_press"]].head()}')
+                except Exception as e:
+                    print(f'[{paired_cond}] DEBUG: stop_fail preview error: {e}')
                 stop_fail_with_resp['expected_response'] = stop_fail_with_resp[stim_col].map(stim_to_resp)
                 stop_fail_with_resp['is_correct'] = stop_fail_with_resp['key_press'] == stop_fail_with_resp['expected_response']
+                print(f'[{paired_cond}] DEBUG: expected_response value_counts\n{stop_fail_with_resp["expected_response"].value_counts(dropna=False)}')
+                print(f'[{paired_cond}] DEBUG: key_press value_counts\n{stop_fail_with_resp["key_press"].value_counts(dropna=False)}')
+                print(f'[{paired_cond}] DEBUG: is_correct mean={stop_fail_with_resp["is_correct"].mean()} value_counts\n{stop_fail_with_resp["is_correct"].value_counts(dropna=False)}')
+                # Special visibility for go_nogo
                 if stim_col == 'go_nogo_condition':
-                    print('expected_response', stop_fail_with_resp['expected_response'])
-                    print('key_press', stop_fail_with_resp['key_press'])
-                    print('is_correct', stop_fail_with_resp['is_correct'])
+                    print(f'[{paired_cond}] DEBUG(go_nogo): rows\n{stop_fail_with_resp[[stim_col, "key_press", "expected_response", "is_correct"]].head(20)}')
                 metrics[f'{paired_cond}_stop_fail_acc'] = stop_fail_with_resp['is_correct'].mean()
             else:
                 metrics[f'{paired_cond}_stop_fail_acc'] = np.nan
         else:
+            print(f'[{paired_cond}] DEBUG: No go_trials available for mapping')
             metrics[f'{paired_cond}_stop_fail_acc'] = np.nan
     elif stim_cols is not None:
+        print(f'[{paired_cond}] DEBUG: Using stim_cols={stim_cols} for mapping')
         if not go_trials.empty:
-            # Group by multiple stimulus columns
+            try:
+                print(f'[{paired_cond}] DEBUG: go_trials sample\n{go_trials[stim_cols + ["correct_response", "key_press"]].head()}')
+            except Exception as e:
+                print(f'[{paired_cond}] DEBUG: go_trials preview error: {e}')
             stim_to_resp = (
                 go_trials.groupby(stim_cols)['correct_response']
                 .agg(lambda x: x.value_counts().idxmax())
                 .to_dict()
             )
+            print(f'[{paired_cond}] DEBUG: stim_to_resp (size={len(stim_to_resp)}) – first 5: {list(stim_to_resp.items())[:5]}')
 
             stop_fail_with_resp = df[stop_fail_mask & (df['key_press'] != -1)]
+            print(f'[{paired_cond}] DEBUG: stop_fail_with_resp rows={len(stop_fail_with_resp)}')
             if not stop_fail_with_resp.empty:
                 stop_fail_with_resp = stop_fail_with_resp.copy()
-                # Create a tuple key from multiple stimulus columns
+                try:
+                    print(f'[{paired_cond}] DEBUG: stop_fail sample before key\n{stop_fail_with_resp[stim_cols + ["key_press"]].head()}')
+                except Exception as e:
+                    print(f'[{paired_cond}] DEBUG: stop_fail preview error: {e}')
                 stop_fail_with_resp['stim_key'] = stop_fail_with_resp[stim_cols].apply(tuple, axis=1)
                 stop_fail_with_resp['expected_response'] = stop_fail_with_resp['stim_key'].map(stim_to_resp)
                 stop_fail_with_resp['is_correct'] = stop_fail_with_resp['key_press'] == stop_fail_with_resp['expected_response']
+                print(f'[{paired_cond}] DEBUG: expected_response value_counts\n{stop_fail_with_resp["expected_response"].value_counts(dropna=False)}')
+                print(f'[{paired_cond}] DEBUG: key_press value_counts\n{stop_fail_with_resp["key_press"].value_counts(dropna=False)}')
+                print(f'[{paired_cond}] DEBUG: is_correct mean={stop_fail_with_resp["is_correct"].mean()} value_counts\n{stop_fail_with_resp["is_correct"].value_counts(dropna=False)}')
+                # If go_nogo in stim_cols, show detailed rows
+                if 'go_nogo_condition' in stim_cols:
+                    print(f'[{paired_cond}] DEBUG(go_nogo): rows\n{stop_fail_with_resp[stim_cols + ["key_press", "expected_response", "is_correct"]].head(20)}')
                 metrics[f'{paired_cond}_stop_fail_acc'] = stop_fail_with_resp['is_correct'].mean()
             else:
                 metrics[f'{paired_cond}_stop_fail_acc'] = np.nan
         else:
+            print(f'[{paired_cond}] DEBUG: No go_trials available for mapping (multi-stim)')
             metrics[f'{paired_cond}_stop_fail_acc'] = np.nan
     else:
         metrics[f'{paired_cond}_stop_fail_acc'] = np.nan
