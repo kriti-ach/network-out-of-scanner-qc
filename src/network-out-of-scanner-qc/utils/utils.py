@@ -1153,6 +1153,8 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
                 .agg(lambda x: x.value_counts().idxmax())
                 .to_dict()
             )
+            if stim_col == 'go_nogo_condition':
+                print(stim_to_resp)
 
             stop_fail_with_resp = df[stop_fail_mask & (df['key_press'] != -1)]
             if not stop_fail_with_resp.empty:
