@@ -1036,12 +1036,20 @@ def append_summary_rows_to_csv(csv_path):
 
 def correct_columns(csv_path):
     df = pd.read_csv(csv_path)
+    columns_renamed = False
     for col in df.columns:
         if 'tswitch_new_cswitch' in col:
             print("Original column name:", col)
             new_col = col.replace('tswitch_new_cswitch', 'tswitch_cswitch')
             print("New column name:", new_col)
-            df = df.rename(columns={col: new_col}, inplace=True)
+            df.rename(columns={col: new_col}, inplace=True)
+            columns_renamed = True
+    
+    if columns_renamed:
+        df.to_csv(csv_path, index=False)
+        print(f"Updated CSV saved to {csv_path}")
+    else:
+        print("No columns were renamed.")
 
 def calculate_single_stop_signal_metrics(df):
     """
