@@ -589,7 +589,7 @@ def compute_cued_task_switching_metrics(
                 task, cue = t_part.split('_c')
                 mask_acc = (
                     (df[shape_matching_col].apply(lambda x: str(x)) == shape_matching) &
-                    (df['task_condition'].apply(lambda x: str(x).lower()) == ('switch' if task in ['switch', 'switch_new'] else task)) &
+                    (df['task_condition'].apply(lambda x: str(x).lower()) == task) &
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
                 calculate_basic_metrics(df, mask_acc, cond, metrics)
@@ -1039,17 +1039,12 @@ def correct_columns(csv_path):
     columns_renamed = False
     for col in df.columns:
         if 'tswitch_new_cswitch' in col:
-            print("Original column name:", col)
             new_col = col.replace('tswitch_new_cswitch', 'tswitch_cswitch')
-            print("New column name:", new_col)
             df.rename(columns={col: new_col}, inplace=True)
             columns_renamed = True
     
     if columns_renamed:
         df.to_csv(csv_path, index=False)
-        print(f"Updated CSV saved to {csv_path}")
-    else:
-        print("No columns were renamed.")
 
 def calculate_single_stop_signal_metrics(df):
     """
