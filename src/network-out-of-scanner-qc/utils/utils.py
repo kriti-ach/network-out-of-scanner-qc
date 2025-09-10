@@ -570,10 +570,12 @@ def compute_cued_task_switching_metrics(
                 flanker, t_part = cond.split('_t')
                 task, cue = t_part.split('_c')
                 print(f'task: {task}')
+                tc = df['task_condition'].astype(str).str.lower()
+                tc_norm = tc.replace({'switch_new': 'switch'})
                 mask_acc = (
                     df[flanker_col].str.contains(flanker, case=False, na=False) &
-                    (df['task_condition'].apply(lambda x: str(x).lower()) == ('switch' if task in ['switch', 'switch_new'] else task)) &
-                    (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
+                    (tc_norm == task) &
+                    (df['cue_condition'].astype(str).str.lower() == cue)
                 )
                 print(df['task_condition'].unique())
                 calculate_basic_metrics(df, mask_acc, cond, metrics)
