@@ -410,8 +410,7 @@ def update_qc_csv(output_path, task_name, subject_id, metrics):
         
         df = pd.concat([df, new_row], ignore_index=True)
         if task_name == 'flanker_with_cued_task_switching' or task_name == 'shape_matching_with_cued_task_switching':
-            print(df.columns)
-            df = df.drop(columns=[col for col in df.columns if 'tswitch_new_c' in col])
+            df = df.rename(columns=lambda x: x.replace('tswitch_new_cswitch', 'tswitch_cswitch') if 'tswitch_new_cswitch' in x else x)
         df['subject_id_numeric'] = df['subject_id'].str.replace('s', '').astype(int)
         # Sort the DataFrame
         df = df.sort_values(by='subject_id_numeric', ascending=True)
