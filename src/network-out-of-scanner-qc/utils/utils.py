@@ -571,7 +571,7 @@ def compute_cued_task_switching_metrics(
                 task, cue = t_part.split('_c')
                 mask_acc = (
                     df[flanker_col].str.contains(flanker, case=False, na=False) &
-                    (df['task_condition'].apply(lambda x: str(x).lower()) == ('switch' if task in ['switch', 'switch_new'] else task)) &
+                    (df['task_condition'].apply(lambda x: str(x).lower()) == task) &
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
                 calculate_basic_metrics(df, mask_acc, cond, metrics)
