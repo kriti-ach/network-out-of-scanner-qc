@@ -582,6 +582,7 @@ def compute_cued_task_switching_metrics(
                     (df['task_condition'].apply(lambda x: str(x).lower()) == task) &
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
+                print(cond)
                 calculate_go_nogo_metrics(df, mask_acc, cond, metrics)
             elif condition_type == 'shape_matching':
                 # cond format: {shape_matching}_t{task}_c{cue}
