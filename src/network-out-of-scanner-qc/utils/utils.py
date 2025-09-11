@@ -70,7 +70,7 @@ def extend_go_nogo_metric_columns(base_columns, conditions):
     columns = base_columns.copy()
     for cond in conditions:
         # Check if this condition ends with 'nogo' or contains '_nogo_'
-        if cond.endswith('_nogo') or '_nogo_' in cond or cond == 'nogo':
+        if cond.endswith('_nogo') or 'nogo' in cond or cond == 'nogo':
             # For nogo: only acc and rt
             columns.extend([f'{cond}_acc', f'{cond}_rt'])
         else:
