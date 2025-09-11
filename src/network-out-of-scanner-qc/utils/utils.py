@@ -515,7 +515,7 @@ def calculate_go_nogo_metrics(df, mask_acc, cond_name, metrics_dict):
         None: Updates metrics_dict in place
     """
     # Check if this is a nogo condition
-    is_nogo = cond_name.endswith('_nogo') or '_nogo_' in cond_name or cond_name == 'nogo'
+    is_nogo = cond_name.endswith('_nogo') or 'nogo' in cond_name or cond_name == 'nogo'
     
     if is_nogo:
         # For nogo: only calculate RT for commission errors (incorrect responses)
@@ -582,7 +582,6 @@ def compute_cued_task_switching_metrics(
                     (df['task_condition'].apply(lambda x: str(x).lower()) == task) &
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
-                print(cond)
                 calculate_go_nogo_metrics(df, mask_acc, cond, metrics)
             elif condition_type == 'shape_matching':
                 # cond format: {shape_matching}_t{task}_c{cue}
