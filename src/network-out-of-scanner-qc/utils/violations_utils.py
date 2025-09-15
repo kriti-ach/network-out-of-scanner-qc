@@ -4,6 +4,8 @@ from pathlib import Path
 import re
 import numpy as np
 from utils.utils import filter_to_test_trials
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 def compute_violations(subject_id, df, task_name):
     violations_row = []
@@ -32,3 +34,56 @@ def aggregate_violations(violations_df):
         difference_mean=('difference', 'mean'),
     ).reset_index()
     return aggregated_violations_df
+
+def plot_violations(aggregated_violations_df, violations_output_path):
+    # Get unique subjects and tasks
+    subjects = sorted(aggregated_violations_df['subject_id'].unique())
+    tasks = sorted(aggregated_violations_df['task_name'].unique())
+
+    # Create a figure with subplots
+    fig, axes = plt.subplots(nrows=len(subjects), ncols=len(tasks), 
+                             figsize=(5*len(tasks), 3*len(subjects)), 
+                             squeeze=False)
+
+    # Set a common y-limit for all plots
+    y_min = aggregated_violations_df['difference_mean'].min()
+    y_max = aggregated_violations_df['difference_mean'].max()
+    y_range = y_max - y_min
+    y_limit = (y_min - 0.1*y_range, y_max + 0.1*y_range)
+
+    for i, subject in enumerate(subjects):
+        for j, task in enumerate(tasks):
+            ax = axes[i, j]
+            
+            # Filter data for this subject and task
+            data = aggregated_violations_df[(aggregated_violations_df['subject_id'] == subject) & 
+                                            (aggregated_violations_df['task_name'] == task)]
+            
+            if not data.empty:
+                ax.scatter(data['ssd'], data['difference_mean'], color='blue')
+                ax.axhline(0, color='red', linestyle='--')
+                ax.set_ylim(y_limit)
+                
+                # Only set x and y labels for the leftmost and bottom subplots
+                if j == 0:
+                    ax.set_ylabel('Avg Stop RT - Go RT')
+                if i == len(subjects) - 1:
+                    ax.set_xlabel('SSD (s)')
+                
+                # Remove top and right spines
+                ax.spines['top'].set_visible(False)
+                ax.spines['right'].set_visible(False)
+            
+            # Set title only for the top row
+            if i == 0:
+                ax.set_title(task)
+            
+            # Set subject ID only for the rightmost column
+            if j == len(tasks) - 1:
+                ax.text(1.02, 0.5, subject, transform=ax.transAxes, 
+                        rotation=-90, va='center')
+
+    # Adjust layout and save
+    plt.tight_layout()
+    plt.savefig(violations_output_path / 'violations_matrix.png', dpi=300, bbox_inches='tight')
+    plt.close()

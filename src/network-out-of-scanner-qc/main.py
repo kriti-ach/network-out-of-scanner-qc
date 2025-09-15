@@ -12,7 +12,7 @@ from utils.utils import (
     append_summary_rows_to_csv,
     correct_columns,
 )
-from utils.violations_utils import compute_violations, aggregate_violations
+from utils.violations_utils import compute_violations, aggregate_violations, plot_violations
 from utils.globals import SINGLE_TASKS_FMRI, DUAL_TASKS_FMRI, SINGLE_TASKS_OUT_OF_SCANNER, DUAL_TASKS_OUT_OF_SCANNER
 
 # folder_path = Path("/oak/stanford/groups/russpold/data/network_grant/validation_BIDS/")
@@ -62,3 +62,4 @@ for task in SINGLE_TASKS_OUT_OF_SCANNER + DUAL_TASKS_OUT_OF_SCANNER:
 violations_df.to_csv(violations_output_path / 'violations_data.csv', index=False)
 aggregated_violations_df = aggregate_violations(violations_df)
 aggregated_violations_df.to_csv(violations_output_path / 'aggregated_violations_data.csv', index=False)
+plot_violations(aggregated_violations_df, violations_output_path)
