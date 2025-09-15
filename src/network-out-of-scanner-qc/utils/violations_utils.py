@@ -38,7 +38,7 @@ def aggregate_violations(violations_df):
 
 def plot_violations(aggregated_violations_df, violations_output_path):
     # Get unique subjects and tasks
-    subjects = sorted(aggregated_violations_df['subject_id'].unique())
+    subjects = aggregated_violations_df['subject_id'].unique()
     tasks = sorted(aggregated_violations_df['task_name'].unique())
 
     # Create a figure with subplots
