@@ -49,6 +49,7 @@ for subject_folder in glob.glob(str(folder_path / "s*")):
                     # df = pd.read_csv(file, sep='\t')
                     metrics = get_task_metrics(df, task_name)
                     if 'stop_signal' in task_name:
+                        print(f'Computing violations for {task_name}')
                         violations_df = pd.concat([violations_df, compute_violations(subject_id, df, task_name)])
                     update_qc_csv(output_path, task_name, subject_id, metrics)
                 except Exception as e:
