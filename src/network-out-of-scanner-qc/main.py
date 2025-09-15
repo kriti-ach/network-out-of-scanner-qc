@@ -25,7 +25,7 @@ violations_output_path = Path("/oak/stanford/groups/russpold/data/network_grant/
 # Initialize QC CSVs for all tasks
 initialize_qc_csvs(SINGLE_TASKS_OUT_OF_SCANNER + DUAL_TASKS_OUT_OF_SCANNER, output_path)
 
-violations_df = pd.DataFrame()
+violations_list = []
 for subject_folder in glob.glob(str(folder_path / "s*")):
     subject_id = Path(subject_folder).name
     # if re.match(r"s\d{2,}", subject_id):
@@ -50,7 +50,9 @@ for subject_folder in glob.glob(str(folder_path / "s*")):
                     metrics = get_task_metrics(df, task_name)
                     if 'stop_signal' in task_name:
                         print(f'Computing violations for {task_name}')
-                        violations_df = pd.concat([violations_df, compute_violations(subject_id, df, task_name)])
+                        violations = compute_violations(subject_id, df, task_name)
+                        if not violations.empty:
+                            violations_list.append(violations)
                     update_qc_csv(output_path, task_name, subject_id, metrics)
                 except Exception as e:
                     print(f"Error processing {task_name} for subject {subject_id}: {str(e)}")
@@ -60,4 +62,5 @@ for task in SINGLE_TASKS_OUT_OF_SCANNER + DUAL_TASKS_OUT_OF_SCANNER:
     if task == 'flanker_with_cued_task_switching' or task == 'shape_matching_with_cued_task_switching':
         correct_columns(output_path / f"{task}_qc.csv")
 
+violations_df = pd.concat(violations_list, ignore_index=True)
 violations_df.to_csv(violations_output_path / 'violations_data.csv', index=False)
