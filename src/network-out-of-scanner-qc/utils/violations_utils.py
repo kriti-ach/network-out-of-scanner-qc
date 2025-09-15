@@ -3,15 +3,15 @@ import os
 from pathlib import Path
 import re
 import numpy as np
+from utils.utils import filter_to_test_trials
 
 def compute_violations(subject_id, df, task_name):
     violations_row = []
-    if task_name == 'stop_signal_with_n_back':
-        delay = 2
-    else:
-        delay = 3
+    delay = 1 if task_name == 'stop_signal_with_n_back' else 2
 
-    for i in range(len(df) - 1):  # Go until the second to last trial
+    df = filter_to_test_trials(df, task_name)
+
+    for i in range(len(df) - delay): 
         # Check for a Go trial followed by a Stop trial with a violation
         if (df.iloc[i]['stop_signal_condition'] == 'go' and
             df.iloc[i + delay]['stop_signal_condition'] == 'stop' and
