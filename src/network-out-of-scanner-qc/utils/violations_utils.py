@@ -49,6 +49,7 @@ def plot_violations(aggregated_violations_df, violations_output_path):
     # Set a common y-limit for all plots
     y_min = aggregated_violations_df['difference_mean'].min()
     y_max = aggregated_violations_df['difference_mean'].max()
+    print(f'y_min: {y_min}, y_max: {y_max}')
     y_range = y_max - y_min
     y_limit = (y_min - 0.1*y_range, y_max + 0.1*y_range)
 

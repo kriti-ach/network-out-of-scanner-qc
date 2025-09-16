@@ -384,7 +384,6 @@ def filter_to_test_trials(df, task_name):
 def sort_subject_ids(df):
     df['subject_id_numeric'] = df['subject_id'].str.replace('s', '').astype(int)
     df = df.sort_values(by='subject_id_numeric', ascending=True)
-    print(df.columns)
     df = df.drop(columns=['subject_id_numeric'])
     return df
 
@@ -417,10 +416,6 @@ def update_qc_csv(output_path, task_name, subject_id, metrics):
         
         df = pd.concat([df, new_row], ignore_index=True)
         df = sort_subject_ids(df)
-
-        # Remove 'subject_id_numeric' and add the 's' back to 'subject_id'
-        df['subject_id'] = 's' + df['subject_id_numeric'].astype(str)
-        df = df.drop(columns=['subject_id_numeric'])
         df.to_csv(qc_file, index=False)
     except FileNotFoundError:
         print(f"Warning: QC file {qc_file} not found")
