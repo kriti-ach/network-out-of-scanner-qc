@@ -7,40 +7,39 @@ from utils.utils import filter_to_test_trials, sort_subject_ids
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-def check_violation_conditions(df, i, delay):
-    return (df.iloc[i]['stop_signal_condition'] == 'go' and
-            df.iloc[i + delay]['stop_signal_condition'] == 'stop' and
-            df.iloc[i]['rt'] != -1 and
-            df.iloc[i + delay]['rt'] != -1)
+def check_violation_conditions(current_trial, next_valid_trial):
+    return (current_trial['stop_signal_condition'] == 'go' and
+            next_valid_trial['stop_signal_condition'] == 'stop' and
+            current_trial['rt'] != -1 and
+            next_valid_trial['rt'] != -1)
 
 def find_difference(stop_rt, go_rt):
     return stop_rt - go_rt
 
-def get_ssd(df, i, delay):
-    return df.iloc[i + delay]['SS_delay']
+def get_ssd(next_valid_trial):
+    return next_valid_trial['SS_delay']
 
 def compute_violations(subject_id, df, task_name):
     violations_row = []
-    if task_name == 'stop_signal_with_n_back':
-        delay = 1
-    elif task_name == 'stop_signal_with_cued_task_switching':
-        delay = 3
-    else:
-        delay = 2
 
     df = filter_to_test_trials(df, task_name)
 
-    for i in range(len(df) - delay): 
+    for i in range(len(df) - 1): 
+        current_trial = df.iloc[i]
         # Check for a Go trial followed by a Stop trial with a violation
-        if check_violation_conditions(df, i, delay):
+        if current_trial['stop_signal_condition'] == 'go':
+            next_trials = df.iloc[i+1:]
+            next_valid_trial = next_trials[next_trials['stop_signal_condition'].notna()].iloc[0] if not next_trials.empty else None
+
+            if next_valid_trial is not None and next_valid_trial['stop_signal_condition'] == 'stop':
+                if check_violation_conditions(current_trial, next_valid_trial):
+                    go_rt = current_trial['rt']
+                    stop_rt = next_valid_trial['rt']
+                    ssd = get_ssd(next_valid_trial)
+                    difference = find_difference(stop_rt, go_rt)
+                    violations_row.append({'subject_id': subject_id, 'task_name': task_name, 'ssd': ssd, 'difference': difference})
             
-            go_rt = df.iloc[i]['rt']         # RT of Go trial
-            stop_rt = df.iloc[i + delay]['rt']  # RT of Stop trial
             
-            if pd.notna(go_rt) and pd.notna(stop_rt):  # Ensure RTs are valid
-                difference = find_difference(stop_rt, go_rt)  # Calculate the difference
-                ssd = get_ssd(df, i, delay)    # SSD for the Stop trial
-                violations_row.append({'subject_id': subject_id, 'task_name': task_name, 'ssd': ssd, 'difference': difference})
 
     return pd.DataFrame(violations_row)
 
