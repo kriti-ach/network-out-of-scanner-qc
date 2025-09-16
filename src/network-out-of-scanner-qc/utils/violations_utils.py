@@ -21,7 +21,12 @@ def get_ssd(df, i, delay):
 
 def compute_violations(subject_id, df, task_name):
     violations_row = []
-    delay = 1 if task_name == 'stop_signal_with_n_back' else 2
+    if task_name == 'stop_signal_with_n_back':
+        delay = 1
+    elif task_name == 'stop_signal_with_cued_task_switching':
+        delay = 3
+    else:
+        delay = 2
 
     df = filter_to_test_trials(df, task_name)
 
