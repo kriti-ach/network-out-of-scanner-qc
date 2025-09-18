@@ -36,11 +36,9 @@ def compute_violations(subject_id, df, task_name):
                     go_rt = current_trial['rt']
                     stop_rt = next_valid_trial['rt']
                     ssd = get_ssd(next_valid_trial)
-                    if np.isnan(ssd):
-                        print(f'subject_id: {subject_id}, task_name: {task_name}')
-                        print(f'go_rt: {go_rt}, stop_rt: {stop_rt}')
                     difference = find_difference(stop_rt, go_rt)
-                    violations_row.append({'subject_id': subject_id, 'task_name': task_name, 'ssd': ssd, 'difference': difference, 'violation': go_rt < stop_rt})
+                    if not np.isnan(ssd):
+                        violations_row.append({'subject_id': subject_id, 'task_name': task_name, 'ssd': ssd, 'difference': difference, 'violation': go_rt < stop_rt})
 
     return pd.DataFrame(violations_row)
 
