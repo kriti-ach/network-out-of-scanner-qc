@@ -117,5 +117,5 @@ def plot_violations(aggregated_violations_df, violations_output_path):
 def create_violations_matrices(aggregated_violations_df, violations_output_path):
     for task in aggregated_violations_df['task_name'].unique():
         task_df = aggregated_violations_df[aggregated_violations_df['task_name'] == task]
-        task_df = task_df.pivot(index='ssd', columns='subject_id', values='proportion_violation')
+        task_df = task_df.pivot(index='subject_id', columns='ssd', values='proportion_violation')
         task_df.to_csv(violations_output_path / f'{task}_violations_matrix.csv')
