@@ -37,13 +37,14 @@ def compute_violations(subject_id, df, task_name):
                     stop_rt = next_valid_trial['rt']
                     ssd = get_ssd(next_valid_trial)
                     difference = find_difference(stop_rt, go_rt)
-                    violations_row.append({'subject_id': subject_id, 'task_name': task_name, 'ssd': ssd, 'difference': difference})
+                    violations_row.append({'subject_id': subject_id, 'task_name': task_name, 'ssd': ssd, 'difference': difference, 'violation': go_rt < stop_rt})
 
     return pd.DataFrame(violations_row)
 
 def aggregate_violations(violations_df):
     aggregated_violations_df = violations_df.groupby(['subject_id', 'task_name', 'ssd']).agg(
         difference_mean=('difference', 'mean'),
+        proportion_violation=('violation', 'mean'),
     ).reset_index()
     aggregated_violations_df = sort_subject_ids(aggregated_violations_df)
     return aggregated_violations_df
