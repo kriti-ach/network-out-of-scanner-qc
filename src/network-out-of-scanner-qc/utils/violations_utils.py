@@ -62,7 +62,6 @@ def plot_violations(aggregated_violations_df, violations_output_path):
     # Set common y-limit for all plots
     y_min = aggregated_violations_df['difference_mean'].min()
     y_max = aggregated_violations_df['difference_mean'].max()
-    print(f'y_min: {y_min}, y_max: {y_max}')
     y_range = y_max - y_min
     y_limit = (y_min - 0.1*y_range, y_max + 0.1*y_range)
 
@@ -114,3 +113,9 @@ def plot_violations(aggregated_violations_df, violations_output_path):
     # Save the figure
     plt.savefig(violations_output_path / 'violations_matrix.pdf', dpi=300, bbox_inches='tight')
     plt.close()
+
+def create_violations_matrices(aggregated_violations_df, violations_output_path):
+    for task in aggregated_violations_df['task_name'].unique():
+        task_df = aggregated_violations_df[aggregated_violations_df['task_name'] == task]
+        task_df = task_df.pivot(index='ssd', columns='subject_id', values='violation')
+        task_df.to_csv(violations_output_path / f'{task}_violations_matrix.csv')
