@@ -14,6 +14,7 @@ from utils.utils import (
 )
 from utils.violations_utils import compute_violations, aggregate_violations, plot_violations, create_violations_matrices
 from utils.globals import SINGLE_TASKS_FMRI, DUAL_TASKS_FMRI, SINGLE_TASKS_OUT_OF_SCANNER, DUAL_TASKS_OUT_OF_SCANNER
+from utils.exclusion_utils import check_exclusion_criteria
 
 # folder_path = Path("/oak/stanford/groups/russpold/data/network_grant/validation_BIDS/")
 # output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/qc_by_task/")
@@ -54,11 +55,14 @@ for subject_folder in glob.glob(str(folder_path / "s*")):
                 except Exception as e:
                     print(f"Error processing {task_name} for subject {subject_id}: {str(e)}")
 
+exclusion_df = pd.DataFrame({'subject_id': [], 'task_name': [], 'metric': [], 'metric_value': [], 'threshold': []})
 for task in SINGLE_TASKS_OUT_OF_SCANNER + DUAL_TASKS_OUT_OF_SCANNER:
     append_summary_rows_to_csv(output_path / f"{task}_qc.csv")
     if task == 'flanker_with_cued_task_switching' or task == 'shape_matching_with_cued_task_switching':
         correct_columns(output_path / f"{task}_qc.csv")
-
+    # task_csv = pd.read_csv(output_path / f"{task}_qc.csv")
+    # check_exclusion_criteria(task, task_csv, exclusion_df)
+        
 violations_df.to_csv(violations_output_path / 'violations_data.csv', index=False)
 aggregated_violations_df = aggregate_violations(violations_df)
 aggregated_violations_df.to_csv(violations_output_path / 'aggregated_violations_data.csv', index=False)

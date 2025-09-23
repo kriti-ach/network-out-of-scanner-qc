@@ -46,9 +46,32 @@ def aggregate_violations(violations_df):
     aggregated_violations_df = violations_df.groupby(['subject_id', 'task_name', 'ssd']).agg(
         difference_mean=('difference', 'mean'),
         proportion_violation=('violation', 'mean'),
+        count_pairs=('violation', 'count'),
     ).reset_index()
     aggregated_violations_df = sort_subject_ids(aggregated_violations_df)
     return aggregated_violations_df
+
+def create_violations_matrices(aggregated_violations_df, violations_output_path):
+    for task in aggregated_violations_df['task_name'].unique():
+        task_df = aggregated_violations_df[aggregated_violations_df['task_name'] == task]
+        
+        # 1. Proportion of violations matrix
+        prop_matrix = task_df.pivot(index='subject_id', columns='ssd', values='proportion_violation')
+        create_matrix_with_mean(prop_matrix, violations_output_path, f'{task}_proportion_violations_matrix.csv')
+        
+        # 2. Number of pairs of violations per SSD matrix
+        count_matrix = task_df.pivot(index='subject_id', columns='ssd', values='count_pairs')
+        create_matrix_with_mean(count_matrix, violations_output_path, f'{task}_count_violations_matrix.csv')
+        
+        # 3. Average stop failure RT - go RT for violations matrix
+        diff_matrix = task_df.pivot(index='subject_id', columns='ssd', values='difference_mean')
+        create_matrix_with_mean(diff_matrix, violations_output_path, f'{task}_rt_difference_violations_matrix.csv')
+
+def create_matrix_with_mean(matrix, output_path, filename):
+    matrix.loc['mean'] = matrix.mean(axis=0)
+    matrix.loc[:, 'mean'] = matrix.mean(axis=1)
+    matrix.loc['mean', 'mean'] = np.nan
+    matrix.to_csv(output_path / filename)
 
 def plot_violations(aggregated_violations_df, violations_output_path):
     # Get unique subjects and tasks
@@ -114,12 +137,3 @@ def plot_violations(aggregated_violations_df, violations_output_path):
     # Save the figure
     plt.savefig(violations_output_path / 'violations_matrix.pdf', dpi=300, bbox_inches='tight')
     plt.close()
-
-def create_violations_matrices(aggregated_violations_df, violations_output_path):
-    for task in aggregated_violations_df['task_name'].unique():
-        task_df = aggregated_violations_df[aggregated_violations_df['task_name'] == task]
-        task_df = task_df.pivot(index='subject_id', columns='ssd', values='proportion_violation')
-        task_df.loc['mean'] = task_df.mean(axis=0)
-        task_df.loc[:, 'mean'] = task_df.mean(axis=1)
-        task_df.loc['mean', 'mean'] = np.nan
-        task_df.to_csv(violations_output_path / f'{task}_violations_matrix.csv')

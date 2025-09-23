@@ -81,3 +81,22 @@ GO_NOGO_WITH_CUED_CONDITIONS = ['go_tstay_cstay', 'go_tstay_cswitch', 'go_tswitc
 SHAPE_MATCHING_WITH_CUED_CONDITIONS = ['SSS_tstay_cstay', 'SSS_tstay_cswitch', 'SSS_tswitch_new_cswitch', 'SDD_tstay_cstay', 'SDD_tstay_cswitch', 'SDD_tswitch_new_cswitch', 'DNN_tstay_cstay', 'DNN_tstay_cswitch', 'DNN_tswitch_new_cswitch', 'DSD_tstay_cstay', 'DSD_tstay_cswitch', 'DSD_tswitch_new_cswitch', 'DDS_tstay_cstay', 'DDS_tstay_cswitch', 'DDS_tswitch_new_cswitch', 'DDD_tstay_cstay', 'DDD_tstay_cswitch', 'DDD_tswitch_new_cswitch']
 CUED_TASK_SWITCHING_WITH_DIRECTED_FORGETTING_CONDITIONS = ['con_tstay_cstay', 'con_tstay_cswitch', 'con_tswitch_cswitch', 'pos_tstay_cstay', 'pos_tstay_cswitch', 'pos_tswitch_cswitch', 'neg_tstay_cstay', 'neg_tstay_cswitch', 'neg_tswitch_cswitch']
 SHAPE_MATCHING_CONDITIONS_WITH_DIRECTED_FORGETTING = ['match', 'mismatch']
+
+# Stop signal task
+STOP_ACC_LOW_THRESHOLD = 0.25
+STOP_ACC_HIGH_THRESHOLD = 0.75
+GO_RT_THRESHOLD = 750
+
+#Go nogo task
+GO_ACC_THRESHOLD = 0.857
+NOGO_ACC_THRESHOLD = 0.143
+
+#N back task
+MISMATCH_1_BACK_THRESHOLD = 0.8
+MISMATCH_2_BACK_THRESHOLD = 0.8
+MATCH_1_BACK_THRESHOLD = 0.2
+MATCH_2_BACK_THRESHOLD = 0.2
+
+# All other tasks
+ACC_THRESHOLD = 0.55
+OMISSION_RATE_THRESHOLD = 0.5
