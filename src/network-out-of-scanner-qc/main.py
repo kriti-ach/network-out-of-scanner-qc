@@ -14,7 +14,7 @@ from utils.utils import (
 )
 from utils.violations_utils import compute_violations, aggregate_violations, plot_violations, create_violations_matrices
 from utils.globals import SINGLE_TASKS_FMRI, DUAL_TASKS_FMRI, SINGLE_TASKS_OUT_OF_SCANNER, DUAL_TASKS_OUT_OF_SCANNER
-from utils.exclusion_utils import check_exclusion_criteria
+# from utils.exclusion_utils import check_exclusion_criteria
 
 # folder_path = Path("/oak/stanford/groups/russpold/data/network_grant/validation_BIDS/")
 # output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/qc_by_task/")
