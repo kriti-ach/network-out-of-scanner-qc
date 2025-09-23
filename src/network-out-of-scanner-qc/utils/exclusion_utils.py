@@ -40,7 +40,4 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
         if row['stop_fail_acc'] > STOP_ACC_HIGH_THRESHOLD:
 
 
-def check_go_nogo_exclusion_criteria(task_csv):
-
-
 
