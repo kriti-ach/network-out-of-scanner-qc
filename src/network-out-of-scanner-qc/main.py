@@ -55,8 +55,8 @@ for subject_folder in glob.glob(str(folder_path / "s*")):
                 except Exception as e:
                     print(f"Error processing {task_name} for subject {subject_id}: {str(e)}")
 
-exclusion_df = pd.DataFrame({'subject_id': [], 'task_name': [], 'metric': [], 'metric_value': [], 'threshold': []})
 for task in SINGLE_TASKS_OUT_OF_SCANNER + DUAL_TASKS_OUT_OF_SCANNER:
+    exclusion_df = pd.DataFrame({'subject_id': [], 'task_name': [], 'metric': [], 'metric_value': [], 'threshold': []})
     append_summary_rows_to_csv(output_path / f"{task}_qc.csv")
     if task == 'flanker_with_cued_task_switching' or task == 'shape_matching_with_cued_task_switching':
         correct_columns(output_path / f"{task}_qc.csv")
