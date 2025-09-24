@@ -8,8 +8,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src" / "network-out-of-scanner-qc"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
+QC_DIR = SRC_DIR / "qc"
+if str(QC_DIR) not in sys.path:
+    sys.path.insert(0, str(QC_DIR))
 
-from qc.qc_utils import (  # noqa: E402
+from .qc_utils import (  # noqa: E402
     initialize_qc_csvs,
     extract_task_name_out_of_scanner,
     update_qc_csv,
