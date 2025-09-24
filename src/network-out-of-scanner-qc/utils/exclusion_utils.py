@@ -17,6 +17,7 @@ from utils.globals import (
     ACC_THRESHOLD,
     OMISSION_RATE_THRESHOLD
 )
+from utils.qc_utils import sort_subject_ids
 
 def check_exclusion_criteria(task_name, task_csv, exclusion_df):
         if 'stop_signal' in task_name:
@@ -56,38 +57,38 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
             continue
         subject_id = row['subject_id']
 
-        # Create a dictionary to hold metric values from the row
-        metrics_info = {
-            'stop_success': [row.filter(like='stop_success').values,
-                              STOP_SUCCESS_ACC_LOW_THRESHOLD,
-                              STOP_SUCCESS_ACC_HIGH_THRESHOLD],
-            'go_rt': [np.array(row.filter(like='go_rt').values).flatten(), GO_RT_THRESHOLD],
-            'go_acc': [np.array(row.filter(like='go_acc').values).flatten(), ACC_THRESHOLD],
-            'go_omission_rate': [np.array(row.filter(like='go_omission_rate').values).flatten(), OMISSION_RATE_THRESHOLD]
-        }
+        # Get actual column names for each metric type
+        stop_success_cols = [col for col in task_csv.columns if 'stop_success' in col]
+        go_rt_cols = [col for col in task_csv.columns if 'go_rt' in col]
+        go_acc_cols = [col for col in task_csv.columns if 'go_acc' in col]
+        go_omission_rate_cols = [col for col in task_csv.columns if 'go_omission_rate' in col]
         
         # Check stop_success specifically for low and high thresholds
-        stop_success_values = metrics_info['stop_success'][0]
-        for value in stop_success_values:
+        for col_name in stop_success_cols:
+            value = row[col_name]
             if compare_to_threshold('stop_success_low', value, STOP_SUCCESS_ACC_LOW_THRESHOLD):
-                exclusion_df = append_exclusion_row(exclusion_df, subject_id, task_name, 'stop_success', value, STOP_SUCCESS_ACC_LOW_THRESHOLD)
+                exclusion_df = append_exclusion_row(exclusion_df, subject_id, task_name, col_name, value, STOP_SUCCESS_ACC_LOW_THRESHOLD)
             if compare_to_threshold('stop_success_high', value, STOP_SUCCESS_ACC_HIGH_THRESHOLD):
-                exclusion_df = append_exclusion_row(exclusion_df, subject_id, task_name, 'stop_success', value, STOP_SUCCESS_ACC_HIGH_THRESHOLD)
+                exclusion_df = append_exclusion_row(exclusion_df, subject_id, task_name, col_name, value, STOP_SUCCESS_ACC_HIGH_THRESHOLD)
 
-        # Check other metrics except for stop_success
-        for metric_name, (metric_value, *thresholds) in metrics_info.items():
-            if metric_name == 'stop_success':
-                continue
-            # If metric_value is already a numpy array, we don't need to check its size
-            for threshold in thresholds:
-                # Iterate over the metric values (this handles both arrays and single values)
-                for value in np.atleast_1d(metric_value):  # Treat metric_value as an array
-                    if compare_to_threshold(metric_name, value, threshold):
-                        exclusion_df = append_exclusion_row(exclusion_df, subject_id, task_name, metric_name, value, threshold)
+        # Check go_rt columns
+        for col_name in go_rt_cols:
+            value = row[col_name]
+            if compare_to_threshold('go_rt', value, GO_RT_THRESHOLD):
+                exclusion_df = append_exclusion_row(exclusion_df, subject_id, task_name, col_name, value, GO_RT_THRESHOLD)
 
+        # Check go_acc columns
+        for col_name in go_acc_cols:
+            value = row[col_name]
+            if compare_to_threshold('go_acc', value, ACC_THRESHOLD):
+                exclusion_df = append_exclusion_row(exclusion_df, subject_id, task_name, col_name, value, ACC_THRESHOLD)
+
+        # Check go_omission_rate columns
+        for col_name in go_omission_rate_cols:
+            value = row[col_name]
+            if compare_to_threshold('go_omission_rate', value, OMISSION_RATE_THRESHOLD):
+                exclusion_df = append_exclusion_row(exclusion_df, subject_id, task_name, col_name, value, OMISSION_RATE_THRESHOLD)
+
+    #sort by subject_id
+    exclusion_df = sort_subject_ids(exclusion_df)
     return exclusion_df
-
-
-
-
-
