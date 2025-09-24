@@ -102,8 +102,11 @@ def check_go_nogo_exclusion_criteria(task_name, task_csv, exclusion_df):
 
         # Get actual column names for each metric type
         go_acc_cols = [col for col in task_csv.columns if '_go_acc' in col]
+        print(f"go_acc_cols: {go_acc_cols}")
         nogo_acc_cols = [col for col in task_csv.columns if '_nogo_acc' in col]
+        print(f"nogo_acc_cols: {nogo_acc_cols}")
         go_omission_rate_cols = [col for col in task_csv.columns if '_go_omission_rate' in col]
+        print(f"go_omission_rate_cols: {go_omission_rate_cols}")
 
         # If go accuracy < threshold AND nogo accuracy < threshold, then exclude
         # Only check when the prefix (before go_acc/nogo_acc) matches
