@@ -14,13 +14,14 @@ from utils.utils import (
 )
 from utils.violations_utils import compute_violations, aggregate_violations, plot_violations, create_violations_matrices
 from utils.globals import SINGLE_TASKS_FMRI, DUAL_TASKS_FMRI, SINGLE_TASKS_OUT_OF_SCANNER, DUAL_TASKS_OUT_OF_SCANNER
-# from utils.exclusion_utils import check_exclusion_criteria
+from utils.exclusion_utils import check_exclusion_criteria
 
 # folder_path = Path("/oak/stanford/groups/russpold/data/network_grant/validation_BIDS/")
 # output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/qc_by_task/")
 
 folder_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/out_of_scanner")
-output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/qc_by_task/out_of_scanner/")
+output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/out_of_scanner_qc")
+exclusions_output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/out_of_scanner_exclusions")
 violations_output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/out_of_scanner_violations")
 
 # Initialize QC CSVs for all tasks
@@ -42,7 +43,6 @@ for subject_folder in glob.glob(str(folder_path / "s*")):
             if task_name == 'stop_signal_with_go_no_go':
                 task_name = 'stop_signal_with_go_nogo'
             # task_name = extract_task_name_fmri(filename)
-            print(f"Processing task: {task_name}")
             
             if task_name:
                 try:
@@ -60,8 +60,9 @@ for task in SINGLE_TASKS_OUT_OF_SCANNER + DUAL_TASKS_OUT_OF_SCANNER:
     append_summary_rows_to_csv(output_path / f"{task}_qc.csv")
     if task == 'flanker_with_cued_task_switching' or task == 'shape_matching_with_cued_task_switching':
         correct_columns(output_path / f"{task}_qc.csv")
-    # task_csv = pd.read_csv(output_path / f"{task}_qc.csv")
-    # check_exclusion_criteria(task, task_csv, exclusion_df)
+    task_csv = pd.read_csv(output_path / f"{task}_qc.csv")
+    exclusion_df = check_exclusion_criteria(task, task_csv, exclusion_df)
+exclusion_df.to_csv(exclusions_output_path / "exclusion_data.csv", index=False)
         
 violations_df.to_csv(violations_output_path / 'violations_data.csv', index=False)
 aggregated_violations_df = aggregate_violations(violations_df)
