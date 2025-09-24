@@ -55,7 +55,7 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
 
         # Create a dictionary to hold metric values from the row
         metrics_info = {
-            'stop_fail_acc': [row.filter(like='stop_success').values,
+            'stop_success': [row.filter(like='stop_success').values,
                               STOP_SUCCESS_ACC_LOW_THRESHOLD,
                               STOP_SUCCESS_ACC_HIGH_THRESHOLD],
             'go_rt': [np.array(row.filter(like='go_rt').values).flatten(), GO_RT_THRESHOLD],
