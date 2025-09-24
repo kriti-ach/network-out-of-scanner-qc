@@ -52,28 +52,33 @@ def append_exclusion_row(exclusion_df, subject_id, task_name, metric_name, metri
 def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
     for index, row in task_csv.iterrows():
         subject_id = row['subject_id']
-        
-        # List of metrics and their corresponding thresholds
+
+        # Create a dictionary to hold metric values from the row
         metrics_info = {
-            'stop_fail_acc': [row.get('stop_fail_acc'), STOP_ACC_LOW_THRESHOLD, STOP_ACC_HIGH_THRESHOLD],
-            'go_rt': [row.get('go_rt'), GO_RT_THRESHOLD],
-            'go_acc': [row.get('go_acc'), GO_ACC_THRESHOLD],
-            'go_omission_rate': [row.get('go_omission_rate'), OMISSION_RATE_THRESHOLD]
+            'stop_fail_acc': [row.filter(like='stop_fail_acc').values, 
+                              STOP_ACC_LOW_THRESHOLD, 
+                              STOP_ACC_HIGH_THRESHOLD],
+            'go_rt': [row.filter(like='go_rt').values[0], GO_RT_THRESHOLD],
+            'go_acc': [row.filter(like='go_acc').values[0], GO_ACC_THRESHOLD],
+            'go_omission_rate': [row.filter(like='go_omission_rate').values[0], OMISSION_RATE_THRESHOLD]
         }
         
         # Check stop_fail_acc specifically for low and high thresholds
-        stop_fail_acc_value = metrics_info['stop_fail_acc'][0]
-        if compare_to_threshold('stop_fail_acc_low', stop_fail_acc_value, STOP_ACC_LOW_THRESHOLD):
-            exclusion_df = append_exclusion_row(exclusion_df, subject_id, task_name, 'stop_fail_acc', stop_fail_acc_value, STOP_ACC_LOW_THRESHOLD)
-        if compare_to_threshold('stop_fail_acc_high', stop_fail_acc_value, STOP_ACC_HIGH_THRESHOLD):
-            exclusion_df = append_exclusion_row(exclusion_df, subject_id, task_name, 'stop_fail_acc', stop_fail_acc_value, STOP_ACC_HIGH_THRESHOLD)
+        stop_fail_acc_values = metrics_info['stop_fail_acc'][0]
+        for value in stop_fail_acc_values:
+            if compare_to_threshold('stop_fail_acc_low', value, STOP_ACC_LOW_THRESHOLD):
+                exclusion_df = append_exclusion_row(exclusion_df, subject_id, task_name, 'stop_fail_acc', value, STOP_ACC_LOW_THRESHOLD)
+            if compare_to_threshold('stop_fail_acc_high', value, STOP_ACC_HIGH_THRESHOLD):
+                exclusion_df = append_exclusion_row(exclusion_df, subject_id, task_name, 'stop_fail_acc', value, STOP_ACC_HIGH_THRESHOLD)
 
         # Check other metrics
         for metric_name, (metric_value, *thresholds) in metrics_info.items():
             # If multiple thresholds are provided, check each one
             for threshold in thresholds:
-                if compare_to_threshold(metric_name, metric_value, threshold):
-                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, task_name, metric_name, metric_value, threshold)
+                if metric_value.size > 0:  # Ensure there are values to check
+                    for value in metric_value:
+                        if compare_to_threshold(metric_name, value, threshold):
+                            exclusion_df = append_exclusion_row(exclusion_df, subject_id, task_name, metric_name, value, threshold)
 
     return exclusion_df
 
