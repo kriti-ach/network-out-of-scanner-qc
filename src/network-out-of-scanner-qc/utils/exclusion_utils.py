@@ -33,7 +33,7 @@ def check_exclusion_criteria(task_name, task_csv, exclusion_df):
 
 def compare_to_threshold(metric_name, metric_value, threshold):
     """Check if a metric value violates the exclusion criteria."""
-    return metric_value < threshold if 'low' in metric_name else metric_value > threshold
+    return metric_value < threshold if 'low' in metric_name or 'accuracy' in metric_name else metric_value > threshold
 
 def append_exclusion_row(exclusion_df, subject_id, task_name, metric_name, metric_value, threshold):
     """Append a new exclusion row to the exclusion dataframe."""
@@ -71,8 +71,10 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
             if compare_to_threshold('stop_success_high', value, STOP_SUCCESS_ACC_HIGH_THRESHOLD):
                 exclusion_df = append_exclusion_row(exclusion_df, subject_id, task_name, 'stop_success', value, STOP_SUCCESS_ACC_HIGH_THRESHOLD)
 
-        # Check other metrics
+        # Check other metrics except for stop_success
         for metric_name, (metric_value, *thresholds) in metrics_info.items():
+            if metric_name == 'stop_success':
+                continue
             # If metric_value is already a numpy array, we don't need to check its size
             for threshold in thresholds:
                 # Iterate over the metric values (this handles both arrays and single values)
