@@ -75,7 +75,7 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
         for metric_name, (metric_value, *thresholds) in metrics_info.items():
             # If multiple thresholds are provided, check each one
             for threshold in thresholds:
-                if metric_value.size > 0:  # Ensure there are values to check
+                if metric_value > 0:  # Ensure there are values to check
                     for value in metric_value:
                         if compare_to_threshold(metric_name, value, threshold):
                             exclusion_df = append_exclusion_row(exclusion_df, subject_id, task_name, metric_name, value, threshold)
