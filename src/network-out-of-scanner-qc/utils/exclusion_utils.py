@@ -42,10 +42,6 @@ def compare_to_threshold(metric_name, metric_value, threshold):
         print(f'metric_name: {metric_name}, metric_value: {metric_value}, threshold: {threshold}')
         print(f'metric value < threshold: {metric_value < threshold}')
         return metric_value < threshold
-    else:
-        print(f'metric_name: {metric_name}, metric_value: {metric_value}, threshold: {threshold}')
-        print(f'metric value > threshold: {metric_value > threshold}')
-        return metric_value > threshold
 
 def append_exclusion_row(exclusion_df, subject_id, metric_name, metric_value, threshold):
     """Append a new exclusion row to the exclusion dataframe."""
