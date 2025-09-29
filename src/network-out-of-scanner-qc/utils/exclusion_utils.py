@@ -38,9 +38,14 @@ def check_exclusion_criteria(task_name, task_csv, exclusion_df):
 
 def compare_to_threshold(metric_name, metric_value, threshold):
     """Check if a metric value violates the exclusion criteria."""
-    print(f'metric_name: {metric_name}, metric_value: {metric_value}, threshold: {threshold}')
-    print(f'metric value < threshold: {metric_value < threshold}')
-    return metric_value < threshold if 'low' in metric_name or 'acc' in metric_name else metric_value > threshold
+    if 'match' in metric_name or 'mismatch' in metric_name:
+        print(f'metric_name: {metric_name}, metric_value: {metric_value}, threshold: {threshold}')
+        print(f'metric value < threshold: {metric_value < threshold}')
+        return metric_value < threshold
+    else:
+        print(f'metric_name: {metric_name}, metric_value: {metric_value}, threshold: {threshold}')
+        print(f'metric value > threshold: {metric_value > threshold}')
+        return metric_value > threshold
 
 def append_exclusion_row(exclusion_df, subject_id, metric_name, metric_value, threshold):
     """Append a new exclusion row to the exclusion dataframe."""
