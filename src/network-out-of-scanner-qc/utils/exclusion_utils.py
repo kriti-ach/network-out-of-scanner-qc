@@ -10,6 +10,7 @@ from utils.globals import (
     GO_RT_THRESHOLD,
     GO_ACC_THRESHOLD_GO_NOGO,
     NOGO_ACC_THRESHOLD_GO_NOGO,
+    GO_OMISSION_RATE_THRESHOLD,
     MISMATCH_1_BACK_THRESHOLD,
     MISMATCH_2_BACK_THRESHOLD,
     MATCH_1_BACK_THRESHOLD,
@@ -121,16 +122,17 @@ def check_go_nogo_exclusion_criteria(task_name, task_csv, exclusion_df):
                 if go_prefix == nogo_prefix:
                     go_acc_value = row[col_name_go]
                     nogo_acc_value = row[col_name_nogo]
-                    if compare_to_threshold('go_acc', go_acc_value, GO_ACC_THRESHOLD_GO_NOGO) and compare_to_threshold('_nogo_acc', nogo_acc_value, NOGO_ACC_THRESHOLD_GO_NOGO):
+                    if compare_to_threshold('go_acc', go_acc_value, GO_ACC_THRESHOLD_GO_NOGO):
                         exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name_go, go_acc_value, GO_ACC_THRESHOLD_GO_NOGO)
+                    if compare_to_threshold('nogo_acc', nogo_acc_value, NOGO_ACC_THRESHOLD_GO_NOGO):
                         exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name_nogo, nogo_acc_value, NOGO_ACC_THRESHOLD_GO_NOGO)
                     if np.mean([go_acc_value, nogo_acc_value]) < ACC_THRESHOLD:
                         exclusion_df = append_exclusion_row(exclusion_df, subject_id, 'mean_go_and_nogo_acc', np.mean([go_acc_value, nogo_acc_value]), ACC_THRESHOLD)
 
         for col_name in go_omission_rate_cols:
             value = row[col_name]
-            if compare_to_threshold('go_omission_rate', value, OMISSION_RATE_THRESHOLD):
-                exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, OMISSION_RATE_THRESHOLD)
+            if compare_to_threshold('go_omission_rate', value, GO_OMISSION_RATE_THRESHOLD):
+                exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, GO_OMISSION_RATE_THRESHOLD)
     #sort by subject_id
     if len(exclusion_df) != 0:
         exclusion_df = sort_subject_ids(exclusion_df)
