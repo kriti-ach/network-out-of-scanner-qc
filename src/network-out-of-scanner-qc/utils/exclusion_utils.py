@@ -141,165 +141,79 @@ def check_n_back_exclusion_criteria(task_name, task_csv, exclusion_df):
         if index >= len(task_csv) - 4:
             continue
         subject_id = row['subject_id']
-        
-        # Pull needed columns safely
-        match_1_acc = [col for col in task_csv.columns if 'match_1.0back' in col and 'acc' in col and 'mismatch' not in col]
-        mismatch_1_acc = [col for col in task_csv.columns if 'mismatch_1.0back' in col and 'acc' in col]
-        match_2_acc = [col for col in task_csv.columns if 'match_2.0back' in col and 'acc' in col and 'mismatch' not in col]
-        mismatch_2_acc = [col for col in task_csv.columns if 'mismatch_2.0back' in col and 'acc' in col]
-        match_3_acc = [col for col in task_csv.columns if 'match_3.0back' in col and 'acc' in col and 'mismatch' not in col]
-        mismatch_3_acc = [col for col in task_csv.columns if 'mismatch_3.0back' in col and 'acc' in col]
 
-        match_1_omiss = [col for col in task_csv.columns if 'match_1.0back' in col and 'omission_rate' in col and 'mismatch' not in col]
-        match_2_omiss = [col for col in task_csv.columns if 'match_2.0back' in col and 'omission_rate' in col and 'mismatch' not in col]
-        mismatch_1_omiss = [col for col in task_csv.columns if 'mismatch_1.0back' in col and 'omission_rate' in col]
-        mismatch_2_omiss = [col for col in task_csv.columns if 'mismatch_2.0back' in col and 'omission_rate' in col]
-        match_3_omiss = [col for col in task_csv.columns if 'match_3.0back' in col and 'omission_rate' in col and 'mismatch' not in col]
-        mismatch_3_omiss = [col for col in task_csv.columns if 'mismatch_3.0back' in col and 'omission_rate' in col]
-
-        # 1-back weighted mean (20% match, 80% mismatch) < .55
-        for col_name_match_1 in match_1_acc:
-            for col_name_mismatch_1 in mismatch_1_acc:
-                match_1_prefix = col_name_match_1.replace('match_1.0back', '')
-                mismatch_1_prefix = col_name_mismatch_1.replace('mismatch_1.0back', '')
-                if match_1_prefix == mismatch_1_prefix:
-                    match_1_acc_value = row[col_name_match_1]
-                    mismatch_1_acc_value = row[col_name_mismatch_1]
-                    if not pd.isna(match_1_acc_value) and not pd.isna(mismatch_1_acc_value):
-                        weighted_1 = LOWER_WEIGHT * match_1_acc_value + UPPER_WEIGHT * mismatch_1_acc_value
-                        if compare_to_threshold('weighted_mean_1.0back_acc', weighted_1, ACC_THRESHOLD):
-                            exclusion_df = append_exclusion_row(
-                                exclusion_df, subject_id, 'weighted_mean_1.0back_acc', weighted_1, ACC_THRESHOLD
-                            )  
-
-        # 2-back weighted mean (20% match, 80% mismatch) < .55
-        for col_name_match_2 in match_2_acc:
-            for col_name_mismatch_2 in mismatch_2_acc:
-                match_2_prefix = col_name_match_2.replace('match_2.0back', '')
-                mismatch_2_prefix = col_name_mismatch_2.replace('mismatch_2.0back', '')
-                if match_2_prefix == mismatch_2_prefix:
-                    match_2_acc_value = row[col_name_match_2]
-                    mismatch_2_acc_value = row[col_name_mismatch_2]
-                    if not pd.isna(match_2_acc_value) and not pd.isna(mismatch_2_acc_value):
-                        weighted_2 = LOWER_WEIGHT * match_2_acc_value + UPPER_WEIGHT * mismatch_2_acc_value
-                        if compare_to_threshold('weighted_mean_2.0back_acc', weighted_2, ACC_THRESHOLD):
-                            exclusion_df = append_exclusion_row(
-                                exclusion_df, subject_id, 'weighted_mean_2.0back_acc', weighted_2, ACC_THRESHOLD
-                            )
-        # 3-back weighted mean (20% match, 80% mismatch) < .55
-        for col_name_match_3 in match_3_acc:
-            for col_name_mismatch_3 in mismatch_3_acc:
-                match_3_prefix = col_name_match_3.replace('match_3.0back', '')
-                mismatch_3_prefix = col_name_mismatch_3.replace('mismatch_3.0back', '')
-                if match_3_prefix == mismatch_3_prefix:
-                    match_3_acc_value = row[col_name_match_3]
-                    mismatch_3_acc_value = row[col_name_mismatch_3]
-                    if not pd.isna(match_3_acc_value) and not pd.isna(mismatch_3_acc_value):
-                        weighted_3 = LOWER_WEIGHT * match_3_acc_value + UPPER_WEIGHT * mismatch_3_acc_value
-                        if compare_to_threshold('weighted_mean_3.0back_acc', weighted_3, ACC_THRESHOLD):
-                            exclusion_df = append_exclusion_row(
-                                exclusion_df, subject_id, 'weighted_mean_3.0back_acc', weighted_3, ACC_THRESHOLD
-                            )
-        # mismatch_1 < .8 AND match_1 < .2
-        for col_name_mismatch_1 in mismatch_1_acc:
-            for col_name_match_1 in match_1_acc:
-                mismatch_1_prefix = col_name_mismatch_1.replace('mismatch_1.0back', '')
-                match_1_prefix = col_name_match_1.replace('match_1.0back', '')
-                if mismatch_1_prefix == match_1_prefix:
-                    mismatch_1_acc_value = row[col_name_mismatch_1]
-                    match_1_acc_value = row[col_name_match_1]
-                    if not pd.isna(mismatch_1_acc_value) and not pd.isna(match_1_acc_value):
-                        if (compare_to_threshold('mismatch_1.0back_acc', mismatch_1_acc_value, MISMATCH_1_BACK_THRESHOLD) 
-                        and compare_to_threshold('match_1.0back_acc', match_1_acc_value, MATCH_1_BACK_THRESHOLD)):
-                            print(f'mismatch_1.0back_acc: {mismatch_1_acc_value}, mismatch_1.0back_acc threshold: {MISMATCH_1_BACK_THRESHOLD}')
-                            print(f'match_1.0back_acc: {match_1_acc_value}, match_1.0back_acc threshold: {MATCH_1_BACK_THRESHOLD}')
-                            exclusion_df = append_exclusion_row(
-                                exclusion_df, subject_id, 'mismatch_1.0back_acc', mismatch_1_acc_value, MISMATCH_1_BACK_THRESHOLD
-                            )
-                            exclusion_df = append_exclusion_row(
-                                exclusion_df, subject_id, 'match_1.0back_acc', match_1_acc_value, MATCH_1_BACK_THRESHOLD
-                            )
-
-        # mismatch_2 < .8 AND match_2 < .2
-        for col_name_mismatch_2 in mismatch_2_acc:
-            for col_name_match_2 in match_2_acc:
-                mismatch_2_prefix = col_name_mismatch_2.replace('mismatch_2.0back', '')
-                match_2_prefix = col_name_match_2.replace('match_2.0back', '')
-                if mismatch_2_prefix == match_2_prefix:
-                    mismatch_2_acc_value = row[col_name_mismatch_2]
-                    match_2_acc_value = row[col_name_match_2]
-                    if not pd.isna(mismatch_2_acc_value) and not pd.isna(match_2_acc_value):
-                        if (compare_to_threshold('mismatch_2.0back_acc', mismatch_2_acc_value, MISMATCH_2_BACK_THRESHOLD) 
-                        and compare_to_threshold('match_2.0back_acc', match_2_acc_value, MATCH_2_BACK_THRESHOLD)):
-                            print(f'mismatch_2.0back_acc: {mismatch_2_acc_value}, mismatch_2.0back_acc threshold: {MISMATCH_2_BACK_THRESHOLD}')
-                            print(f'match_2.0back_acc: {match_2_acc_value}, match_2.0back_acc threshold: {MATCH_2_BACK_THRESHOLD}')
-                            exclusion_df = append_exclusion_row(
-                                exclusion_df, subject_id, 'mismatch_2.0back_acc', mismatch_2_acc_value, MISMATCH_2_BACK_THRESHOLD
-                            )
-                            exclusion_df = append_exclusion_row(
-                                exclusion_df, subject_id, 'match_2.0back_acc', match_2_acc_value, MATCH_2_BACK_THRESHOLD
-                            )
-
-
-        # mismatch_3 < .8 AND match_3 < .2
-        for col_name_mismatch_3 in mismatch_3_acc:
-            for col_name_match_3 in match_3_acc:
-                mismatch_3_prefix = col_name_mismatch_3.replace('mismatch_3.0back', '')
-                match_3_prefix = col_name_match_3.replace('match_3.0back', '')
-                if mismatch_3_prefix == match_3_prefix:
-                    mismatch_3_acc_value = row[col_name_mismatch_3]
-                    match_3_acc_value = row[col_name_match_3]
-                    if not pd.isna(mismatch_3_acc_value) and not pd.isna(match_3_acc_value):
-                        if (compare_to_threshold('mismatch_3.0back_acc', mismatch_3_acc_value, MISMATCH_3_BACK_THRESHOLD) 
-                        and compare_to_threshold('match_3.0back_acc', match_3_acc_value, MATCH_3_BACK_THRESHOLD)):
-                            print(f'mismatch_3.0back_acc: {mismatch_3_acc_value}, mismatch_3.0back_acc threshold: {MISMATCH_3_BACK_THRESHOLD}')
-                            print(f'match_3.0back_acc: {match_3_acc_value}, match_3.0back_acc threshold: {MATCH_3_BACK_THRESHOLD}')
-                            exclusion_df = append_exclusion_row(
-                                exclusion_df, subject_id, 'mismatch_3.0back_acc', mismatch_3_acc_value, MISMATCH_3_BACK_THRESHOLD
-                            )
-                            exclusion_df = append_exclusion_row(
-                                exclusion_df, subject_id, 'match_3.0back_acc', match_3_acc_value, MATCH_3_BACK_THRESHOLD
-                            )
-
-        # Omission rate checks (> .5)
-        for col_name_match_1 in match_1_omiss:
-            value = row[col_name_match_1]
-            if compare_to_threshold('match_1.0back_omission_rate', value, OMISSION_RATE_THRESHOLD):
-                exclusion_df = append_exclusion_row(
-                    exclusion_df, subject_id, 'match_1.0back_omission_rate', value, OMISSION_RATE_THRESHOLD
-                )
-        for col_name_match_2 in match_2_omiss:
-            value = row[col_name_match_2]
-            if compare_to_threshold('match_2.0back_omission_rate', value, OMISSION_RATE_THRESHOLD):
-                exclusion_df = append_exclusion_row(
-                    exclusion_df, subject_id, 'match_2.0back_omission_rate', value, OMISSION_RATE_THRESHOLD
-                )
-        for col_name_match_3 in match_3_omiss:
-            value = row[col_name_match_3]
-            if compare_to_threshold('match_3.0back_omission_rate', value, OMISSION_RATE_THRESHOLD):
-                exclusion_df = append_exclusion_row(
-                    exclusion_df, subject_id, 'match_3.0back_omission_rate', value, OMISSION_RATE_THRESHOLD
-                )
-        for col_name_mismatch_1 in mismatch_1_omiss:
-            value = row[col_name_mismatch_1]
-            if compare_to_threshold('mismatch_1.0back_omission_rate', value, OMISSION_RATE_THRESHOLD):
-                exclusion_df = append_exclusion_row(
-                    exclusion_df, subject_id, 'mismatch_1.0back_omission_rate', value, OMISSION_RATE_THRESHOLD
-                )
-        for col_name_mismatch_2 in mismatch_2_omiss:
-            value = row[col_name_mismatch_2]
-            if compare_to_threshold('mismatch_2.0back_omission_rate', value, OMISSION_RATE_THRESHOLD):
-                exclusion_df = append_exclusion_row(
-                    exclusion_df, subject_id, 'mismatch_2.0back_omission_rate', value, OMISSION_RATE_THRESHOLD
-                )
-        for col_name_mismatch_3 in mismatch_3_omiss:
-            value = row[col_name_mismatch_3]
-            if compare_to_threshold('mismatch_3.0back_omission_rate', value, OMISSION_RATE_THRESHOLD):
-                exclusion_df = append_exclusion_row(
-                    exclusion_df, subject_id, 'mismatch_3.0back_omission_rate', value, OMISSION_RATE_THRESHOLD
-                )
+        for level in [1, 2, 3]:
+            cols = _nback_get_columns(task_csv, level)
+            exclusion_df = _nback_flag_weighted_means(exclusion_df, subject_id, row, level, cols)
+            exclusion_df = _nback_flag_joint_accuracy(exclusion_df, subject_id, row, level, cols)
+            exclusion_df = _nback_flag_omission_rates(exclusion_df, subject_id, row, level, cols)
 
     #sort by subject_id
     if len(exclusion_df) != 0:
         exclusion_df = sort_subject_ids(exclusion_df)
+    return exclusion_df
+
+def _nback_get_columns(task_csv, level):
+    level_str = f"{level}.0back"
+    match_acc = [col for col in task_csv.columns if f'match_{level_str}' in col and 'acc' in col and 'mismatch' not in col]
+    mismatch_acc = [col for col in task_csv.columns if f'mismatch_{level_str}' in col and 'acc' in col]
+    match_omiss = [col for col in task_csv.columns if f'match_{level_str}' in col and 'omission_rate' in col and 'mismatch' not in col]
+    mismatch_omiss = [col for col in task_csv.columns if f'mismatch_{level_str}' in col and 'omission_rate' in col]
+    return {
+        'match_acc': match_acc,
+        'mismatch_acc': mismatch_acc,
+        'match_omiss': match_omiss,
+        'mismatch_omiss': mismatch_omiss,
+    }
+
+def _nback_iter_pairs(match_cols, mismatch_cols, level):
+    match_prefix = f'match_{level}.0back'
+    mismatch_prefix = f'mismatch_{level}.0back'
+    match_map = {c.replace(match_prefix, ''): c for c in match_cols}
+    mismatch_map = {c.replace(mismatch_prefix, ''): c for c in mismatch_cols}
+    for suffix in set(match_map.keys()).intersection(mismatch_map.keys()):
+        yield match_map[suffix], mismatch_map[suffix]
+
+def _nback_flag_weighted_means(exclusion_df, subject_id, row, level, cols):
+    for match_col, mismatch_col in _nback_iter_pairs(cols['match_acc'], cols['mismatch_acc'], level):
+        match_val = row[match_col]
+        mismatch_val = row[mismatch_col]
+        if not pd.isna(match_val) and not pd.isna(mismatch_val):
+            weighted = LOWER_WEIGHT * match_val + UPPER_WEIGHT * mismatch_val
+            if compare_to_threshold(f'weighted_mean_{level}.0back_acc', weighted, ACC_THRESHOLD):
+                exclusion_df = append_exclusion_row(
+                    exclusion_df, subject_id, f'weighted_mean_{level}.0back_acc', weighted, ACC_THRESHOLD
+                )
+    return exclusion_df
+
+def _nback_flag_joint_accuracy(exclusion_df, subject_id, row, level, cols):
+    mismatch_threshold = {1: MISMATCH_1_BACK_THRESHOLD, 2: MISMATCH_2_BACK_THRESHOLD, 3: MISMATCH_3_BACK_THRESHOLD}[level]
+    match_threshold = {1: MATCH_1_BACK_THRESHOLD, 2: MATCH_2_BACK_THRESHOLD, 3: MATCH_3_BACK_THRESHOLD}[level]
+    for match_col, mismatch_col in _nback_iter_pairs(cols['match_acc'], cols['mismatch_acc'], level):
+        mismatch_val = row[mismatch_col]
+        match_val = row[match_col]
+        if not pd.isna(mismatch_val) and not pd.isna(match_val):
+            if compare_to_threshold(f'mismatch_{level}.0back_acc', mismatch_val, mismatch_threshold) and \
+               compare_to_threshold(f'match_{level}.0back_acc', match_val, match_threshold):
+                exclusion_df = append_exclusion_row(
+                    exclusion_df, subject_id, f'mismatch_{level}.0back_acc', mismatch_val, mismatch_threshold
+                )
+                exclusion_df = append_exclusion_row(
+                    exclusion_df, subject_id, f'match_{level}.0back_acc', match_val, match_threshold
+                )
+    return exclusion_df
+
+def _nback_flag_omission_rates(exclusion_df, subject_id, row, level, cols):
+    for match_om_col in cols['match_omiss']:
+        val = row[match_om_col]
+        if compare_to_threshold(f'match_{level}.0back_omission_rate', val, OMISSION_RATE_THRESHOLD):
+            exclusion_df = append_exclusion_row(
+                exclusion_df, subject_id, f'match_{level}.0back_omission_rate', val, OMISSION_RATE_THRESHOLD
+            )
+    for mismatch_om_col in cols['mismatch_omiss']:
+        val = row[mismatch_om_col]
+        if compare_to_threshold(f'mismatch_{level}.0back_omission_rate', val, OMISSION_RATE_THRESHOLD):
+            exclusion_df = append_exclusion_row(
+                exclusion_df, subject_id, f'mismatch_{level}.0back_omission_rate', val, OMISSION_RATE_THRESHOLD
+            )
     return exclusion_df
