@@ -30,11 +30,11 @@ def check_exclusion_criteria(task_name, task_csv, exclusion_df):
             exclusion_df = check_go_nogo_exclusion_criteria(task_name, task_csv, exclusion_df)
         if 'n_back' in task_name:
             exclusion_df = check_n_back_exclusion_criteria(task_name, task_csv, exclusion_df)
+        if ('flanker' in task_name or 'directed_forgetting' in task_name or 
+        'shape_matching' in task_name or 'spatial_task_switching' in task_name or 
+        'cued_task_switching' in task_name):
+            exclusion_df = check_other_exclusion_criteria(task_name, task_csv, exclusion_df)
         return exclusion_df
-        # if ('flanker' in task_name or 'directed_forgetting' in task_name or 
-        # 'shape_matching' in task_name or 'spatial_task_switching' in task_name or 
-        # 'cued_task_switching' in task_name):
-        #     check_other_exclusion_criteria(task_name, task_csv, exclusion_df)
 
 def compare_to_threshold(metric_name, metric_value, threshold):
     """Check if a metric value violates the exclusion criteria."""
@@ -216,4 +216,20 @@ def _nback_flag_omission_rates(exclusion_df, subject_id, row, level, cols):
             exclusion_df = append_exclusion_row(
                 exclusion_df, subject_id, f'mismatch_{level}.0back_omission_rate', val, OMISSION_RATE_THRESHOLD
             )
+    return exclusion_df
+
+def check_other_exclusion_criteria(task_name, task_csv, exclusion_df):
+    for index, row in task_csv.iterrows():
+        subject_id = row['subject_id']
+        for col_name in task_csv.columns:
+            acc_cols = [col for col in task_csv.columns if 'acc' in col]
+            omission_rate_cols = [col for col in task_csv.columns if 'omission_rate' in col]
+            if col_name in acc_cols:
+                value = row[col_name]
+                if compare_to_threshold(col_name, value, ACC_THRESHOLD):
+                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, ACC_THRESHOLD)
+            if col_name in omission_rate_cols:
+                value = row[col_name]
+                if compare_to_threshold(col_name, value, OMISSION_RATE_THRESHOLD):
+                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, OMISSION_RATE_THRESHOLD)
     return exclusion_df
