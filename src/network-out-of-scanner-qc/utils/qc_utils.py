@@ -507,7 +507,7 @@ def calculate_commission_rate(df, mask_commission, total_num_trials):
     num_commissions = len(df[mask_commission])
     return num_commissions / total_num_trials if total_num_trials > 0 else np.nan
 
-def add_category_accuracies(df, column_name, label_to_metric_key, metrics, stopsignal=False):
+def add_category_accuracies(df, column_name, label_to_metric_key, metrics, stopsignal=False, cuedts=False):
     """
     Add accuracy metrics aggregated over all trials for specified category labels.
 
@@ -517,13 +517,17 @@ def add_category_accuracies(df, column_name, label_to_metric_key, metrics, stops
         label_to_metric_key (dict): Mapping from label (lowercased) to output metric key
         metrics (dict): Metrics dict to populate
         stopsignal (bool): Whether this is a stop signal task
+        cuedts (bool): Whether this is a cued task switching task
     """
     series = df[column_name].apply(lambda x: str(x).lower())
     for label, metric_key in label_to_metric_key.items():
         mask = series == label
         if stopsignal:
             mask = mask & (df['SS_trial_type'] == 'go')
-        metrics[metric_key] = calculate_accuracy(df, mask)
+        if cuedts:
+            metrics[metric_key] = df[mask]['key_press'] == df[mask]['correct_response'].mean()
+        else:
+            metrics[metric_key] = df[mask]['correct_trial'].mean()
 
 def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict):
     """
@@ -1346,17 +1350,6 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
             metrics,
             stopsignal=True
         )
-        try:
-            series = df['task'].apply(lambda x: str(x).lower())
-            total_go = int((df['SS_trial_type'] == 'go').sum())
-            for label in ['parity', 'magnitude']:
-                m = (series == label) & (df['SS_trial_type'] == 'go')
-                n = int(m.sum())
-                acc = df.loc[m, 'correct_trial'].mean() if n > 0 else np.nan
-                print(f"[DEBUG cued+stop] {label} go-trials: n={n}/{total_go}, acc={acc}")
-            print(f"[DEBUG cued+stop] unique task values: {sorted(series.dropna().unique().tolist())}")
-        except Exception as e:
-            print(f"[DEBUG cued+stop] debug print failed: {e}")
     elif spatialts:
         add_category_accuracies(
             df,
