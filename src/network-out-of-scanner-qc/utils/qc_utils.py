@@ -1336,16 +1336,16 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
             df,
             'task',
             {'parity': 'parity_accuracy', 'magnitude': 'magnitude_accuracy'},
-            stopsignal=True,
-            metrics
+            metrics,
+            stopsignal=True
         )
     elif spatialts:
         add_category_accuracies(
             df,
             'predictable_dimension',
             {'parity': 'parity_accuracy', 'magnitude': 'magnitude_accuracy'},
-            stopsignal=True,
-            metrics
+            metrics,
+            stopsignal=True
         )
     
     return metrics
