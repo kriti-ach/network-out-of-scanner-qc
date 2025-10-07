@@ -525,9 +525,7 @@ def add_category_accuracies(df, column_name, label_to_metric_key, metrics, stops
         if stopsignal:
             mask = mask & (df['SS_trial_type'] == 'go')
         if cuedts:
-            print(len(df[mask]['key_press'] == df[mask]['correct_response']))
             metrics[metric_key] = (df[mask]['key_press'] == df[mask]['correct_response']).mean()
-            print(metrics[metric_key])
         else:
             metrics[metric_key] = calculate_accuracy(df, mask)
 
@@ -1345,13 +1343,13 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
     metrics[f'{paired_cond}_ssrt'] = compute_SSRT(df, condition_mask=paired_mask, stim_cols=stim_cols)
 
     if cuedts:
-        print("hi")
         add_category_accuracies(
             df,
             'task',
             {'parity': 'parity_accuracy', 'magnitude': 'magnitude_accuracy'},
             metrics,
-            stopsignal=True
+            stopsignal=True,
+            cuedts=True
         )
     elif spatialts:
         add_category_accuracies(
