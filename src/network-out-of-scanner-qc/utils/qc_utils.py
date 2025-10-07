@@ -275,7 +275,7 @@ def get_task_columns(task_name, sample_df=None):
         elif 'shape_matching' in task_name and 'spatial_task_switching' in task_name or 'shape_matching' in task_name and 'spatialTS' in task_name:
             conditions = create_dual_task_conditions(SPATIAL_TASK_SWITCHING_CONDITIONS, SHAPE_MATCHING_CONDITIONS)
             cols = extend_metric_columns(base_columns, conditions)
-            cols.extend(['parity_accuracy', 'magnitude_accuracy'])
+            cols.extend(['same_accuracy', 'different_accuracy'])
             return cols
         elif 'cued_task_switching' in task_name and 'spatial_task_switching' in task_name or 'CuedTS' in task_name and 'spatialTS' in task_name:
             cols = extend_metric_columns(base_columns, SPATIAL_WITH_CUED_CONDITIONS)
@@ -507,7 +507,7 @@ def calculate_commission_rate(df, mask_commission, total_num_trials):
     num_commissions = len(df[mask_commission])
     return num_commissions / total_num_trials if total_num_trials > 0 else np.nan
 
-def add_category_accuracies(df, column_name, label_to_metric_key, metrics):
+def add_category_accuracies(df, column_name, label_to_metric_key, metrics, stopsignal=False):
     """
     Add accuracy metrics aggregated over all trials for specified category labels.
 
@@ -516,10 +516,13 @@ def add_category_accuracies(df, column_name, label_to_metric_key, metrics):
         column_name (str): Column to derive category labels from
         label_to_metric_key (dict): Mapping from label (lowercased) to output metric key
         metrics (dict): Metrics dict to populate
+        stopsignal (bool): Whether this is a stop signal task
     """
     series = df[column_name].apply(lambda x: str(x).lower())
     for label, metric_key in label_to_metric_key.items():
         mask = series == label
+        if stopsignal:
+            mask = mask & (df['SS_trial_type'] == 'go')
         metrics[metric_key] = calculate_accuracy(df, mask)
 
 def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict):
@@ -920,7 +923,7 @@ def get_task_metrics(df, task_name):
                 'spatial_task_switching': 'task_switch',
                 'directed_forgetting': 'directed_forgetting_condition'
             }
-            return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name), spatialts=True)
+            return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name), spatialts=True, directedforgetting=True)
         
         elif ('spatial_task_switching' in task_name and 'flanker' in task_name) or ('spatialTS' in task_name and 'flanker' in task_name):
             conditions = {
@@ -953,7 +956,7 @@ def get_task_metrics(df, task_name):
                 'spatial_task_switching': 'task_switch',
                 'shape_matching': 'shape_matching_condition'
             }
-            return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name), spatialts=True)
+            return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name), spatialts=True, shapematching=True)
         
         elif ('cued_task_switching' in task_name and 'spatial_task_switching' in task_name) or ('CuedTS' in task_name and 'spatialTS' in task_name):
             return compute_cued_spatial_task_switching_metrics(df, SPATIAL_WITH_CUED_CONDITIONS)
@@ -1036,6 +1039,10 @@ def get_task_metrics(df, task_name):
 
         elif 'cued_task_switching' in task_name:
             return compute_cued_task_switching_metrics(df, CUED_TASK_SWITCHING_CONDITIONS, 'single')
+        elif 'spatial_task_switching' in task_name or 'spatialTS' in task_name:
+            conditions = {'spatial_task_switching': SPATIAL_TASK_SWITCHING_CONDITIONS}
+            condition_columns = {'spatial_task_switching': 'task_switch'}
+            return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name), spatialts=True)
         # Special handling for stop signal task
         elif 'stop_signal' in task_name:
             return compute_stop_signal_metrics(df, dual_task=False)
@@ -1046,9 +1053,6 @@ def get_task_metrics(df, task_name):
         elif 'flanker' in task_name:
             conditions = {'flanker': FLANKER_CONDITIONS}
             condition_columns = {'flanker': 'flanker_condition'}
-        elif 'spatial_task_switching' in task_name or 'spatialTS' in task_name:
-            conditions = {'spatial_task_switching': SPATIAL_TASK_SWITCHING_CONDITIONS}
-            condition_columns = {'spatial_task_switching': 'task_switch'}
         elif 'go_nogo' in task_name:
             conditions = {'go_nogo': GO_NOGO_CONDITIONS}
             condition_columns = {'go_nogo': 'go_nogo_condition'}
@@ -1061,7 +1065,7 @@ def get_task_metrics(df, task_name):
     
         return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name))
 
-def calculate_metrics(df, conditions, condition_columns, is_dual_task, spatialts=False):
+def calculate_metrics(df, conditions, condition_columns, is_dual_task, spatialts=False, shapematching=False, directedforgetting=False):
     """
     Calculate RT and accuracy metrics for any task.
     
@@ -1071,7 +1075,8 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task, spatialts
         condition_columns (dict): Dictionary of task names and their condition column names
         is_dual_task (bool): Whether this is a dual task
         spatialts (bool): Whether this is a spatial task switching task
-        
+        shapematching (bool): Whether this is a shape matching task
+        directedforgetting (bool): Whether this is a directed forgetting task
     Returns:
         dict: Dictionary containing task-specific metrics
     """
@@ -1099,7 +1104,21 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task, spatialts
                     calculate_go_nogo_metrics(df, mask_acc, f'{cond1}_{cond2}', metrics)
                 else:
                     calculate_basic_metrics(df, mask_acc, f'{cond1}_{cond2}', metrics)
-        if spatialts:
+        if spatialts and shapematching:
+            add_category_accuracies(
+                df,
+                'predictable_dimension',
+                {'the same': 'same_accuracy', 'different': 'different_accuracy'},
+                metrics
+            )
+        elif spatialts and directedforgetting:
+            add_category_accuracies(
+                df,
+                'predictable_dimension',
+                {'remember': 'remember_accuracy', 'forget': 'forget_accuracy'},
+                metrics
+            )
+        elif spatialts:
             add_category_accuracies(
                 df,
                 'predictable_dimension',
@@ -1317,6 +1336,7 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
             df,
             'task',
             {'parity': 'parity_accuracy', 'magnitude': 'magnitude_accuracy'},
+            stopsignal=True,
             metrics
         )
     elif spatialts:
@@ -1324,6 +1344,7 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
             df,
             'predictable_dimension',
             {'parity': 'parity_accuracy', 'magnitude': 'magnitude_accuracy'},
+            stopsignal=True,
             metrics
         )
     
