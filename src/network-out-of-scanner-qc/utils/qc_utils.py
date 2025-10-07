@@ -507,7 +507,7 @@ def calculate_commission_rate(df, mask_commission, total_num_trials):
     num_commissions = len(df[mask_commission])
     return num_commissions / total_num_trials if total_num_trials > 0 else np.nan
 
-def add_category_accuracies(df, column_name, label_to_metric_key, metrics, stopsignal=False, cuedts=False):
+def add_category_accuracies(df, column_name, label_to_metric_key, metrics, stopsignal=False, cuedts=False, gonogo=False):
     """
     Add accuracy metrics aggregated over all trials for specified category labels.
 
@@ -518,12 +518,15 @@ def add_category_accuracies(df, column_name, label_to_metric_key, metrics, stops
         metrics (dict): Metrics dict to populate
         stopsignal (bool): Whether this is a stop signal task
         cuedts (bool): Whether this is a cued task switching task
+        gonogo (bool): Whether this is a go_nogo task
     """
     series = df[column_name].apply(lambda x: str(x).lower())
     for label, metric_key in label_to_metric_key.items():
         mask = series == label
         if stopsignal:
-            mask = mask & (df['SS_trial_type'] == 'go')
+            mask = mask & (df['SS_trial_type'] == 'go') #only calculating accuracy for go trials
+        if gonogo:
+            mask = mask & (df['go_nogo_condition'] == 'go')
         if cuedts:
             metrics[metric_key] = (df[mask]['key_press'] == df[mask]['correct_response']).mean()
         else:
@@ -636,6 +639,13 @@ def compute_cued_task_switching_metrics(
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
                 calculate_go_nogo_metrics(df, mask_acc, cond, metrics)
+                add_category_accuracies(
+                    df,
+                    'go_nogo_condition',
+                    {'go': 'go_accuracy', 'nogo': 'nogo_accuracy'},
+                    metrics,
+                    gonogo=True
+                )
             elif condition_type == 'shape_matching':
                 # cond format: {shape_matching}_t{task}_c{cue}
                 shape_matching, t_part = cond.split('_t')
@@ -646,6 +656,12 @@ def compute_cued_task_switching_metrics(
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
                 calculate_basic_metrics(df, mask_acc, cond, metrics)
+                add_category_accuracies(
+                    df,
+                    'task',
+                    {'same': 'same_accuracy', 'different': 'different_accuracy'},
+                    metrics
+                )
             elif condition_type == 'directed_forgetting':
                 # cond format: {directed_forgetting}_t{task}_c{cue}
                 directed_forgetting, t_part = cond.split('_t')
@@ -656,30 +672,22 @@ def compute_cued_task_switching_metrics(
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
                 calculate_basic_metrics(df, mask_acc, cond, metrics)
+                add_category_accuracies(
+                    df,
+                    'cued_dimension',
+                    {'remember': 'remember_accuracy', 'forget': 'forget_accuracy'},
+                    metrics
+                )
+            else: 
+                add_category_accuracies(
+                    df,
+                    'task',
+                    {'parity': 'parity_accuracy', 'magnitude': 'magnitude_accuracy'},
+                    metrics
+                )
         except Exception as e:
             print(f"Skipping malformed condition: {cond} ({e})")
             continue
-    if condition_type == 'directed_forgetting':
-        add_category_accuracies(
-            df,
-            'cued_dimension',
-            {'remember': 'remember_accuracy', 'forget': 'forget_accuracy'},
-            metrics
-        )
-    elif condition_type == 'shape_matching':
-        add_category_accuracies(
-            df,
-            'task',
-            {'same': 'same_accuracy', 'different': 'different_accuracy'},
-            metrics
-        )
-    else:
-        add_category_accuracies(
-            df,
-            'task',
-            {'parity': 'parity_accuracy', 'magnitude': 'magnitude_accuracy'},
-            metrics
-        )
     return metrics
 
 def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_conditions=None, cuedts=False, gonogo=False, shapematching=False, spatialts=False):
@@ -949,7 +957,7 @@ def get_task_metrics(df, task_name):
                 'spatial_task_switching': 'task_switch',
                 'go_nogo': 'go_nogo_condition'
             }
-            return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name), spatialts=True)
+            return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name), spatialts=True, gonogo=True)
         
         elif ('spatial_task_switching' in task_name and 'shape_matching' in task_name) or ('spatialTS' in task_name and 'shape_matching' in task_name):
             conditions = {
@@ -1069,7 +1077,7 @@ def get_task_metrics(df, task_name):
     
         return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name))
 
-def calculate_metrics(df, conditions, condition_columns, is_dual_task, spatialts=False, shapematching=False, directedforgetting=False):
+def calculate_metrics(df, conditions, condition_columns, is_dual_task, spatialts=False, shapematching=False, directedforgetting=False, gonogo=False):
     """
     Calculate RT and accuracy metrics for any task.
     
@@ -1081,6 +1089,7 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task, spatialts
         spatialts (bool): Whether this is a spatial task switching task
         shapematching (bool): Whether this is a shape matching task
         directedforgetting (bool): Whether this is a directed forgetting task
+        gonogo (bool): Whether this is a go_nogo task
     Returns:
         dict: Dictionary containing task-specific metrics
     """
@@ -1129,6 +1138,14 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task, spatialts
                 {'parity': 'parity_accuracy', 'magnitude': 'magnitude_accuracy'},
                 metrics
             )
+        elif spatialts and gonogo:
+            add_category_accuracies(
+                df,
+                'predictable_dimension',
+                {'parity': 'parity_accuracy', 'magnitude': 'magnitude_accuracy'},
+                metrics,
+                gonogo=True
+            )
     else:
         # For single tasks, just iterate through conditions
         task = list(conditions.keys())[0]
@@ -1146,7 +1163,7 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task, spatialts
                 {'parity': 'parity_accuracy', 'magnitude': 'magnitude_accuracy'},
                 metrics
             )
-    
+
     return metrics
 
 def append_summary_rows_to_csv(csv_path):
