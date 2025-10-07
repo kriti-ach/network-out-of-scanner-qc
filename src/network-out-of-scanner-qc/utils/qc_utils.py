@@ -1345,6 +1345,7 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
     metrics[f'{paired_cond}_ssrt'] = compute_SSRT(df, condition_mask=paired_mask, stim_cols=stim_cols)
 
     if cuedts:
+        print("hi")
         add_category_accuracies(
             df,
             'task',
