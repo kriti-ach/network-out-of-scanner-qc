@@ -1135,6 +1135,13 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task, spatialts
                 calculate_go_nogo_metrics(df, mask_acc, cond, metrics)
             else:
                 calculate_basic_metrics(df, mask_acc, cond, metrics)
+        if spatialts:
+            add_category_accuracies(
+                df,
+                'predictable_dimension',
+                {'parity': 'parity_accuracy', 'magnitude': 'magnitude_accuracy'},
+                metrics
+            )
     
     return metrics
 
@@ -1339,6 +1346,17 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
             metrics,
             stopsignal=True
         )
+        try:
+            series = df['task'].apply(lambda x: str(x).lower())
+            total_go = int((df['SS_trial_type'] == 'go').sum())
+            for label in ['parity', 'magnitude']:
+                m = (series == label) & (df['SS_trial_type'] == 'go')
+                n = int(m.sum())
+                acc = df.loc[m, 'correct_trial'].mean() if n > 0 else np.nan
+                print(f"[DEBUG cued+stop] {label} go-trials: n={n}/{total_go}, acc={acc}")
+            print(f"[DEBUG cued+stop] unique task values: {sorted(series.dropna().unique().tolist())}")
+        except Exception as e:
+            print(f"[DEBUG cued+stop] debug print failed: {e}")
     elif spatialts:
         add_category_accuracies(
             df,
