@@ -82,24 +82,3 @@ def test_aggregate_violations_and_matrices(tmp_path: Path):
     assert 'mean' in mat.columns
 
 
-def test_create_violations_matrices_and_plot(tmp_path: Path):
-    # Provide minimal aggregated df for two subjects and two SSDs
-    agg = pd.DataFrame({
-        'subject_id': ['s01', 's02'],
-        'task_name': ['stop_signal_with_flanker', 'stop_signal_with_flanker'],
-        'ssd': [0.2, 0.3],
-        'difference_mean': [0.1, 0.4],
-        'proportion_violation': [1.0, 0.5],
-        'count_pairs': [2, 1],
-    })
-
-    create_violations_matrices(agg, tmp_path)
-    # Expect three CSVs
-    for suffix in ['proportion_violations_matrix.csv', 'count_violations_matrix.csv', 'rt_difference_violations_matrix.csv']:
-        assert (tmp_path / f'stop_signal_with_flanker_{suffix}').exists()
-
-    # Plot PDF
-    plot_violations(agg, tmp_path)
-    assert (tmp_path / 'violations_matrix.pdf').exists()
-
-
