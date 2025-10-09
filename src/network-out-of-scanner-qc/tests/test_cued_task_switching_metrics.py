@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import pytest
-from utils.utils import (
+from utils.qc_utils import (
     compute_cued_task_switching_metrics,
     compute_cued_spatial_task_switching_metrics
 )
@@ -117,8 +117,10 @@ class TestCuedTaskSwitchingMetrics:
         for condition in self.go_nogo_conditions:
             assert f'{condition}_acc' in metrics
             assert f'{condition}_rt' in metrics
-            assert f'{condition}_omission_rate' in metrics
-            assert f'{condition}_commission_rate' in metrics
+            # For nogo conditions, omission/commission rates are not included
+            if 'nogo' not in condition:
+                assert f'{condition}_omission_rate' in metrics
+                assert f'{condition}_commission_rate' in metrics
             
         # Check specific values for go_tstay_cstay (1 correct out of 1 trial)
         assert metrics['go_tstay_cstay_acc'] == 1.0

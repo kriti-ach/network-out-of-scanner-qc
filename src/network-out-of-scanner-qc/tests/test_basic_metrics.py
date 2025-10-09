@@ -4,8 +4,8 @@ import pytest
 import sys
 import os
 
-from utils.utils import (
-    calculate_accuracy, calculate_rt, calculate_omission_rate, 
+from utils.qc_utils import (
+    calculate_acc, calculate_rt, calculate_omission_rate,
     calculate_commission_rate, calculate_basic_metrics
 )
 
@@ -29,19 +29,19 @@ class TestBasicMetrics:
         # Create mask for correct trials only
         self.mask_correct = self.df['correct_trial'] == 1
         
-    def test_calculate_accuracy(self):
+    def test_calculate_acc(self):
         """Test accuracy calculation."""
         # Test condition A (3 correct out of 5 trials)
-        acc_a = calculate_accuracy(self.df, self.mask_a)
+        acc_a = calculate_acc(self.df, self.mask_a)
         assert acc_a == 0.6
         
         # Test condition B (3 correct out of 5 trials)
-        acc_b = calculate_accuracy(self.df, self.mask_b)
+        acc_b = calculate_acc(self.df, self.mask_b)
         assert acc_b == 0.6
         
         # Test empty mask
         empty_mask = self.df['condition'] == 'C'
-        acc_empty = calculate_accuracy(self.df, empty_mask)
+        acc_empty = calculate_acc(self.df, empty_mask)
         assert np.isnan(acc_empty)
         
     def test_calculate_rt(self):
@@ -151,7 +151,7 @@ class TestBasicMetrics:
         empty_df = pd.DataFrame(columns=['correct_trial', 'rt', 'key_press'])
         empty_mask = pd.Series([False] * 0)
         
-        assert np.isnan(calculate_accuracy(empty_df, empty_mask))
+        assert np.isnan(calculate_acc(empty_df, empty_mask))
         assert np.isnan(calculate_rt(empty_df, empty_mask))
         
         # Test with all NaN values
@@ -162,7 +162,7 @@ class TestBasicMetrics:
         })
         nan_mask = pd.Series([True, True, True])
         
-        assert np.isnan(calculate_accuracy(nan_df, nan_mask))
+        assert np.isnan(calculate_acc(nan_df, nan_mask))
         assert np.isnan(calculate_rt(nan_df, nan_mask))
         
         # Test with mixed data types
@@ -176,7 +176,7 @@ class TestBasicMetrics:
         mask_omission = mixed_df['key_press'] == -1
         mask_commission = mixed_df['correct_trial'] == 0
         
-        acc = calculate_accuracy(mixed_df, mask_accuracy)
+        acc = calculate_acc(mixed_df, mask_accuracy)
         rt = calculate_rt(mixed_df, mask_rt)
         omission = calculate_omission_rate(mixed_df, mask_omission, 3)
         commission = calculate_commission_rate(mixed_df, mask_commission, 3)

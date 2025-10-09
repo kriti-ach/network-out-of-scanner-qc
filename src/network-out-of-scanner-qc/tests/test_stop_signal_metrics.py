@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import pytest
-from utils.utils import (
+from utils.qc_utils import (
     calculate_single_stop_signal_metrics,
     calculate_stop_signal_ssd_stats,
     calculate_dual_stop_signal_condition_metrics,
@@ -98,6 +98,8 @@ class TestStopSignalMetrics:
         
         # Check values
         assert metrics['congruent_go_rt'] == pytest.approx(np.mean([0.5, 0.6]))
+        # In this dataset, one go trial under congruent has correct_response 2 but key_press 1,
+        # so go_acc should be 0.5
         assert metrics['congruent_go_acc'] == 0.5
         assert metrics['congruent_stop_success'] == 0  
         

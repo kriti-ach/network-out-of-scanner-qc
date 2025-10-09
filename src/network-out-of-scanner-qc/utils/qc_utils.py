@@ -208,7 +208,6 @@ def get_task_columns(task_name, sample_df=None):
             if sample_df is not None:
                 spatial_conditions = [c for c in sample_df['task_switch'].unique() if pd.notna(c) and c != 'na']
                 cols = base_columns + create_stop_signal_dual_columns(spatial_conditions)
-                cols.extend(['parity_acc', 'magnitude_acc'])
                 return cols
             return base_columns
         elif ('stop_signal' in task_name or 'stopSignal' in task_name) and 'cued_task_switching' in task_name:
@@ -222,7 +221,6 @@ def get_task_columns(task_name, sample_df=None):
                                     continue
                                 conditions.append(f"t{task_condition}_c{cue_condition}")
                 cols = base_columns + create_stop_signal_dual_columns(conditions)
-                cols.extend(['parity_acc', 'magnitude_acc'])
                 return cols
             return base_columns
         elif ('stop_signal' in task_name or 'stopSignal' in task_name) and 'n_back' in task_name:
@@ -260,42 +258,33 @@ def get_task_columns(task_name, sample_df=None):
         elif 'directed_forgetting' in task_name and 'spatial_task_switching' in task_name or 'directedForgetting' in task_name and 'spatialTS' in task_name:
             conditions = create_dual_task_conditions(SPATIAL_TASK_SWITCHING_CONDITIONS, DIRECTED_FORGETTING_CONDITIONS)
             cols = extend_metric_columns(base_columns, conditions)
-            cols.extend(['parity_acc', 'magnitude_acc'])
             return cols
         elif 'flanker' in task_name and 'spatial_task_switching' in task_name or 'flanker' in task_name and 'spatialTS' in task_name:
             conditions = create_dual_task_conditions(SPATIAL_TASK_SWITCHING_CONDITIONS, FLANKER_CONDITIONS)
             cols = extend_metric_columns(base_columns, conditions)
-            cols.extend(['parity_acc', 'magnitude_acc'])
             return cols
         elif 'go_nogo' in task_name and 'spatial_task_switching' in task_name or 'go_nogo' in task_name and 'spatialTS' in task_name:
             conditions = create_dual_task_conditions(SPATIAL_TASK_SWITCHING_CONDITIONS, GO_NOGO_CONDITIONS)
             cols = extend_go_nogo_metric_columns(base_columns, conditions)
-            cols.extend(['parity_acc', 'magnitude_acc'])
             return cols
         elif 'shape_matching' in task_name and 'spatial_task_switching' in task_name or 'shape_matching' in task_name and 'spatialTS' in task_name:
             conditions = create_dual_task_conditions(SPATIAL_TASK_SWITCHING_CONDITIONS, SHAPE_MATCHING_CONDITIONS)
             cols = extend_metric_columns(base_columns, conditions)
-            cols.extend(['same_acc', 'different_acc'])
             return cols
         elif 'cued_task_switching' in task_name and 'spatial_task_switching' in task_name or 'CuedTS' in task_name and 'spatialTS' in task_name:
             cols = extend_metric_columns(base_columns, SPATIAL_WITH_CUED_CONDITIONS)
-            cols.extend(['parity_acc', 'magnitude_acc'])
             return cols
         elif 'flanker' in task_name and 'cued_task_switching' in task_name or 'flanker' in task_name and 'CuedTS' in task_name:
             cols = extend_metric_columns(base_columns, FLANKER_WITH_CUED_CONDITIONS)
-            cols.extend(['parity_acc', 'magnitude_acc'])
             return cols
         elif 'go_nogo' in task_name and 'cued_task_switching' in task_name or 'go_nogo' in task_name and 'CuedTS' in task_name:
             cols = extend_go_nogo_metric_columns(base_columns, GO_NOGO_WITH_CUED_CONDITIONS)
-            cols.extend(['parity_acc', 'magnitude_acc'])
             return cols
         elif 'shape_matching' in task_name and 'cued_task_switching' in task_name or 'shape_matching' in task_name and 'CuedTS' in task_name:
             cols = extend_metric_columns(base_columns, SHAPE_MATCHING_WITH_CUED_CONDITIONS)
-            cols.extend(['same_acc', 'different_acc'])
             return cols
         elif 'directed_forgetting' in task_name and 'cued_task_switching' in task_name or 'directedForgetting' in task_name and 'CuedTS' in task_name:
             cols = extend_metric_columns(base_columns, CUED_TASK_SWITCHING_WITH_DIRECTED_FORGETTING_CONDITIONS)
-            cols.extend(['remember_acc', 'forget_acc'])
             return cols
         elif 'go_nogo' in task_name and 'n_back' in task_name or 'go_nogo' in task_name and 'NBack' in task_name:
             return get_dual_n_back_columns(base_columns, sample_df, 'go_nogo_condition', gonogo=True)
@@ -307,20 +296,16 @@ def get_task_columns(task_name, sample_df=None):
             return get_dual_n_back_columns(base_columns, sample_df, 'directed_forgetting_condition')
         elif 'n_back' in task_name and 'cued_task_switching' in task_name or 'NBack' in task_name and 'CuedTS' in task_name:
             cols = get_dual_n_back_columns(base_columns, sample_df, cuedts=True)
-            cols.extend(['parity_acc', 'magnitude_acc'])
             return cols
         elif 'n_back' in task_name and 'spatial_task_switching' in task_name or 'NBack' in task_name and 'spatialTS' in task_name:
             cols = get_dual_n_back_columns(base_columns, sample_df, 'task_switch')
-            cols.extend(['parity_acc', 'magnitude_acc'])
             return cols
     else:
         if 'spatial_task_switching' in task_name or 'spatialTS' in task_name:
             cols = extend_metric_columns(base_columns, SPATIAL_TASK_SWITCHING_CONDITIONS)
-            cols.extend(['parity_acc', 'magnitude_acc'])
             return cols
         elif 'cued_task_switching' in task_name or 'cuedTS' in task_name:
             cols = extend_metric_columns(base_columns, CUED_TASK_SWITCHING_CONDITIONS)
-            cols.extend(['parity_acc', 'magnitude_acc'])
             return cols
         elif 'directed_forgetting' in task_name or 'directedForgetting' in task_name:
             return extend_metric_columns(base_columns, DIRECTED_FORGETTING_CONDITIONS)
@@ -520,6 +505,8 @@ def add_category_accuracies(df, column_name, label_to_metric_key, metrics, stops
         cuedts (bool): Whether this is a cued task switching task
         gonogo (bool): Whether this is a go_nogo task
     """
+    if column_name not in df.columns:
+        return
     series = df[column_name].apply(lambda x: str(x).lower())
     for label, metric_key in label_to_metric_key.items():
         mask = series == label
