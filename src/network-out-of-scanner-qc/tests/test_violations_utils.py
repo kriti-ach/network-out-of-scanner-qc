@@ -13,6 +13,7 @@ from utils.violations_utils import (
     create_violations_matrices,
     plot_violations,
 )
+from utils.qc_utils import normalize_flanker_conditions
 
 
 def test_small_helpers():
@@ -21,6 +22,26 @@ def test_small_helpers():
     assert check_violation_conditions(curr, nxt)
     assert find_difference(0.7, 0.5) == pytest.approx(0.2)
     assert get_ssd(nxt) == 0.2
+
+
+def test_normalize_flanker_conditions():
+    """Test flanker condition normalization."""
+    # Test with prefixed flanker conditions
+    df = pd.DataFrame({
+        'flanker_condition': ['h_incongruent', 'h_congruent', 'f_incongruent', 'f_congruent', 'other'],
+        'other_col': [1, 2, 3, 4, 5]
+    })
+    
+    normalized_df = normalize_flanker_conditions(df)
+    
+    # Check that prefixes are removed
+    expected_conditions = ['incongruent', 'congruent', 'incongruent', 'congruent', 'other']
+    assert list(normalized_df['flanker_condition']) == expected_conditions
+    
+    # Test with DataFrame without flanker_condition column
+    df_no_flanker = pd.DataFrame({'other_col': [1, 2, 3]})
+    normalized_df_no_flanker = normalize_flanker_conditions(df_no_flanker)
+    assert list(normalized_df_no_flanker['other_col']) == [1, 2, 3]
 
 
 def test_compute_violations_basic():

@@ -1180,6 +1180,28 @@ def append_summary_rows_to_csv(csv_path):
         df.loc[len(df)] = values
     df.to_csv(csv_path, index=False)
 
+def normalize_flanker_conditions(df):
+    """
+    Normalize flanker condition values by removing h_ and f_ prefixes.
+    
+    Args:
+        df (pd.DataFrame): DataFrame that may contain flanker_condition column
+        
+    Returns:
+        pd.DataFrame: DataFrame with normalized flanker conditions
+    """
+    if 'flanker_condition' in df.columns:
+        df = df.copy()
+        # Map h_incongruent, h_congruent, f_incongruent, f_congruent to incongruent, congruent
+        flanker_mapping = {
+            'h_incongruent': 'incongruent',
+            'h_congruent': 'congruent', 
+            'f_incongruent': 'incongruent',
+            'f_congruent': 'congruent'
+        }
+        df['flanker_condition'] = df['flanker_condition'].replace(flanker_mapping)
+    return df
+
 def correct_columns(csv_path):
     df = pd.read_csv(csv_path)
     columns_renamed = False
@@ -1350,6 +1372,7 @@ def calculate_dual_stop_signal_condition_metrics(df, paired_cond, paired_mask, s
     metrics[f'{paired_cond}_ssrt'] = compute_SSRT(df, condition_mask=paired_mask, stim_cols=stim_cols)
 
     if cuedts:
+        print((df['correct_response'] == df['key_press']) == df['correct_trial'])
         add_category_accuracies(
             df,
             'task',

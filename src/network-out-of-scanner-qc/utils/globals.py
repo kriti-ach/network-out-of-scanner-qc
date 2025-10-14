@@ -70,7 +70,7 @@ SPATIAL_TASK_SWITCHING_CONDITIONS = ['tstay_cstay', 'tstay_cswitch', 'tswitch_cs
 CUED_TASK_SWITCHING_CONDITIONS = ['tstay_cstay', 'tstay_cswitch', 'tswitch_cswitch']
 N_BACK_CONDITIONS = []  # Will be generated dynamically based on trial_type and delay
 GO_NOGO_CONDITIONS = ['go', 'nogo']
-SHAPE_MATCHING_CONDITIONS = ['SSS', 'SDD', 'DNN', 'DSD', 'DDS', 'DDD']
+SHAPE_MATCHING_CONDITIONS = ['SSS', 'SDD', 'DNN', 'DSD', 'DDS', 'DDD', 'SNN']
 SPATIAL_WITH_CUED_CONDITIONS = ['cuedtstaycstay_spatialtstaycstay', 'cuedtstaycstay_spatialtstaycswitch', 
                                 'cuedtstaycstay_spatialtswitchcswitch', 'cuedtstaycswitch_spatialtstaycstay',
                                 'cuedtstaycswitch_spatialtstaycswitch', 'cuedtstaycswitch_spatialtswitchcswitch',
@@ -78,7 +78,14 @@ SPATIAL_WITH_CUED_CONDITIONS = ['cuedtstaycstay_spatialtstaycstay', 'cuedtstaycs
                                 'cuedtswitchcswitch_spatialtswitchcswitch']
 FLANKER_WITH_CUED_CONDITIONS = ['congruent_tstay_cstay', 'congruent_tstay_cswitch', 'congruent_tswitch_new_cswitch', 'incongruent_tstay_cstay', 'incongruent_tstay_cswitch', 'incongruent_tswitch_new_cswitch']
 GO_NOGO_WITH_CUED_CONDITIONS = ['go_tstay_cstay', 'go_tstay_cswitch', 'go_tswitch_cswitch', 'nogo_tstay_cstay', 'nogo_tstay_cswitch', 'nogo_tswitch_cswitch']
-SHAPE_MATCHING_WITH_CUED_CONDITIONS = ['SSS_tstay_cstay', 'SSS_tstay_cswitch', 'SSS_tswitch_new_cswitch', 'SDD_tstay_cstay', 'SDD_tstay_cswitch', 'SDD_tswitch_new_cswitch', 'DNN_tstay_cstay', 'DNN_tstay_cswitch', 'DNN_tswitch_new_cswitch', 'DSD_tstay_cstay', 'DSD_tstay_cswitch', 'DSD_tswitch_new_cswitch', 'DDS_tstay_cstay', 'DDS_tstay_cswitch', 'DDS_tswitch_new_cswitch', 'DDD_tstay_cstay', 'DDD_tstay_cswitch', 'DDD_tswitch_new_cswitch']
+SHAPE_MATCHING_WITH_CUED_CONDITIONS = ['SSS_tstay_cstay', 'SSS_tstay_cswitch', 
+                                'SSS_tswitch_new_cswitch', 'SDD_tstay_cstay', 'SDD_tstay_cswitch', 
+                                'SDD_tswitch_new_cswitch', 'DNN_tstay_cstay', 'DNN_tstay_cswitch', 
+                                'DNN_tswitch_new_cswitch', 'DSD_tstay_cstay', 'DSD_tstay_cswitch', 
+                                'DSD_tswitch_new_cswitch', 'DDS_tstay_cstay', 'DDS_tstay_cswitch', 
+                                'DDS_tswitch_new_cswitch', 'DDD_tstay_cstay', 'DDD_tstay_cswitch', 
+                                'DDD_tswitch_new_cswitch', 'SNN_tstay_cstay', 'SNN_tstay_cswitch', 
+                                'SNN_tswitch_new_cswitch']
 CUED_TASK_SWITCHING_WITH_DIRECTED_FORGETTING_CONDITIONS = ['con_tstay_cstay', 'con_tstay_cswitch', 'con_tswitch_cswitch', 'pos_tstay_cstay', 'pos_tstay_cswitch', 'pos_tswitch_cswitch', 'neg_tstay_cstay', 'neg_tstay_cswitch', 'neg_tswitch_cswitch']
 SHAPE_MATCHING_CONDITIONS_WITH_DIRECTED_FORGETTING = ['match', 'mismatch']
 
@@ -99,8 +106,6 @@ MISMATCH_3_BACK_THRESHOLD = 0.7
 MATCH_1_BACK_THRESHOLD = 0.2
 MATCH_2_BACK_THRESHOLD = 0.2
 MATCH_3_BACK_THRESHOLD = 0.2
-# LOWER_WEIGHT = 0.2
-# UPPER_WEIGHT = 0.8
 
 # All other tasks
 ACC_THRESHOLD = 0.55

@@ -11,6 +11,7 @@ from utils.qc_utils import (
     get_task_metrics,
     append_summary_rows_to_csv,
     correct_columns,
+    normalize_flanker_conditions,
 )
 from utils.violations_utils import compute_violations, aggregate_violations, plot_violations, create_violations_matrices
 from utils.globals import SINGLE_TASKS_FMRI, DUAL_TASKS_FMRI, SINGLE_TASKS_OUT_OF_SCANNER, DUAL_TASKS_OUT_OF_SCANNER
@@ -48,6 +49,9 @@ for subject_folder in glob.glob(str(folder_path / "s*")):
                 try:
                     df = pd.read_csv(file)
                     # df = pd.read_csv(file, sep='\t')
+                    # Normalize flanker conditions (remove h_ and f_ prefixes)
+                    if 'flanker' in task_name and 'stop_signal' in task_name:
+                        df = normalize_flanker_conditions(df)
                     metrics = get_task_metrics(df, task_name)
                     if 'stop_signal' in task_name:
                         violations_df = pd.concat([violations_df, compute_violations(subject_id, df, task_name)])
