@@ -17,6 +17,12 @@ from utils.globals import (
     MATCH_2_BACK_THRESHOLD,
     MISMATCH_3_BACK_THRESHOLD,
     MATCH_3_BACK_THRESHOLD,
+    MISMATCH_1_BACK_THRESHOLD_COMBINED,
+    MISMATCH_2_BACK_THRESHOLD_COMBINED,
+    MATCH_1_BACK_THRESHOLD_COMBINED,
+    MATCH_2_BACK_THRESHOLD_COMBINED,
+    MISMATCH_3_BACK_THRESHOLD_COMBINED,
+    MATCH_3_BACK_THRESHOLD_COMBINED,
     ACC_THRESHOLD,
     OMISSION_RATE_THRESHOLD,
     SUMMARY_ROWS
@@ -143,6 +149,9 @@ def check_n_back_exclusion_criteria(task_name, task_csv, exclusion_df):
             continue
         subject_id = row['subject_id']
 
+        # Combined condition at the top: mismatch < threshold AND match < threshold
+        exclusion_df = _nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv)
+
         for level in [1, 2, 3]:
             cols = _nback_get_columns(task_csv, level)
             exclusion_df = _nback_flag_independent_accuracy(exclusion_df, subject_id, row, level, cols)
@@ -151,6 +160,34 @@ def check_n_back_exclusion_criteria(task_name, task_csv, exclusion_df):
     #sort by subject_id
     if len(exclusion_df) != 0:
         exclusion_df = sort_subject_ids(exclusion_df)
+    return exclusion_df
+
+def _nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv):
+    """Flag N-back combined condition where both mismatch and match accuracies
+    fall below their respective combined thresholds for a given level.
+
+    Combined rule (by level): mismatch < 70% AND match < 55%.
+    Applies across levels 1, 2, and 3 when columns exist.
+    """
+    for level, mismatch_thr, match_thr in [
+        (1, MISMATCH_1_BACK_THRESHOLD_COMBINED, MATCH_1_BACK_THRESHOLD_COMBINED),
+        (2, MISMATCH_2_BACK_THRESHOLD_COMBINED, MATCH_2_BACK_THRESHOLD_COMBINED),
+        (3, MISMATCH_3_BACK_THRESHOLD_COMBINED, MATCH_3_BACK_THRESHOLD_COMBINED),
+    ]:
+        level_str = f"{level}.0back"
+        mismatch_cols = [col for col in task_csv.columns if f'mismatch_{level_str}' in col and 'acc' in col]
+        match_cols = [col for col in task_csv.columns if f'match_{level_str}' in col and 'acc' in col and 'mismatch' not in col]
+        if mismatch_cols and match_cols:
+            mismatch_val = row[mismatch_cols[0]]
+            match_val = row[match_cols[0]]
+            if pd.notna(mismatch_val) and pd.notna(match_val):
+                if (mismatch_val < mismatch_thr) and (match_val < match_thr):
+                    exclusion_df = append_exclusion_row(
+                        exclusion_df, subject_id, f'combined_mismatch_{level}.0back_acc', mismatch_val, mismatch_thr
+                    )
+                    exclusion_df = append_exclusion_row(
+                        exclusion_df, subject_id, f'combined_match_{level}.0back_acc', match_val, match_thr
+                    )
     return exclusion_df
 
 def _nback_get_columns(task_csv, level):
