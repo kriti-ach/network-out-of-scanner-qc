@@ -11,18 +11,11 @@ from utils.globals import (
     GO_ACC_THRESHOLD_GO_NOGO,
     NOGO_ACC_THRESHOLD_GO_NOGO,
     GO_OMISSION_RATE_THRESHOLD,
-    MISMATCH_1_BACK_THRESHOLD,
-    MISMATCH_2_BACK_THRESHOLD,
-    MATCH_1_BACK_THRESHOLD,
-    MATCH_2_BACK_THRESHOLD,
-    MISMATCH_3_BACK_THRESHOLD,
-    MATCH_3_BACK_THRESHOLD,
-    MISMATCH_1_BACK_THRESHOLD_COMBINED,
-    MISMATCH_2_BACK_THRESHOLD_COMBINED,
-    MATCH_1_BACK_THRESHOLD_COMBINED,
-    MATCH_2_BACK_THRESHOLD_COMBINED,
-    MISMATCH_3_BACK_THRESHOLD_COMBINED,
-    MATCH_3_BACK_THRESHOLD_COMBINED,
+    MISMATCH_THRESHOLD,
+    MISMATCH_COMBINED_THRESHOLD,
+    MATCH_THRESHOLD,
+    MISMATCH_COMBINED_THRESHOLD,
+    MATCH_COMBINED_THRESHOLD,
     ACC_THRESHOLD,
     OMISSION_RATE_THRESHOLD,
     SUMMARY_ROWS
@@ -170,24 +163,33 @@ def _nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv):
     Combined rule (by level): mismatch < 70% AND match < 55%.
     Applies across levels 1, 2, and 3 when columns exist.
     """
-    for level, mismatch_thr, match_thr in [
-        (1, MISMATCH_1_BACK_THRESHOLD_COMBINED, MATCH_1_BACK_THRESHOLD_COMBINED),
-        (2, MISMATCH_2_BACK_THRESHOLD_COMBINED, MATCH_2_BACK_THRESHOLD_COMBINED),
-        (3, MISMATCH_3_BACK_THRESHOLD_COMBINED, MATCH_3_BACK_THRESHOLD_COMBINED),
-    ]:
+    for level in [1, 2, 3]:
         level_str = f"{level}.0back"
-        mismatch_cols = [col for col in task_csv.columns if f'mismatch_{level_str}' in col and 'acc' in col and 'nogo' not in col]
-        match_cols = [col for col in task_csv.columns if f'match_{level_str}' in col and 'acc' in col and 'mismatch' not in col and 'nogo' not in col]
-        if mismatch_cols and match_cols:
-            mismatch_val = row[mismatch_cols[0]]
-            match_val = row[match_cols[0]]
+        mismatch_cols = [col for col in task_csv.columns if f'mismatch_{level_str}_' in col and 'acc' in col and 'nogo' not in col]
+        match_cols = [col for col in task_csv.columns if f'match_{level_str}_' in col and 'acc' in col and 'mismatch' not in col and 'nogo' not in col]
+
+        # Build maps by condition suffix to require same non-nback condition (e.g., flanker congruency, cuedTS state)
+        def suffix(col: str, prefix: str) -> str:
+            # Everything after the prefix, preserves full condition detail
+            idx = col.find(prefix)
+            return col[idx + len(prefix):] if idx != -1 else col
+
+        mismatch_map = {suffix(c, f"mismatch_{level_str}_"): c for c in mismatch_cols}
+        match_map = {suffix(c, f"match_{level_str}_"): c for c in match_cols}
+        common_suffixes = set(mismatch_map.keys()) & set(match_map.keys())
+
+        for cond_suffix in common_suffixes:
+            mismatch_col = mismatch_map[cond_suffix]
+            match_col = match_map[cond_suffix]
+            mismatch_val = row[mismatch_col]
+            match_val = row[match_col]
             if pd.notna(mismatch_val) and pd.notna(match_val):
-                if (mismatch_val < mismatch_thr) and (match_val < match_thr):
+                if (mismatch_val < MISMATCH_COMBINED_THRESHOLD) and (match_val < MATCH_COMBINED_THRESHOLD):
                     exclusion_df = append_exclusion_row(
-                        exclusion_df, subject_id, f'combined_mismatch_{level}.0back_acc', mismatch_val, mismatch_thr
+                        exclusion_df, subject_id, mismatch_col, mismatch_val, MISMATCH_COMBINED_THRESHOLD
                     )
                     exclusion_df = append_exclusion_row(
-                        exclusion_df, subject_id, f'combined_match_{level}.0back_acc', match_val, match_thr
+                        exclusion_df, subject_id, match_col, match_val, MATCH_COMBINED_THRESHOLD
                     )
     return exclusion_df
 
@@ -195,46 +197,36 @@ def _nback_get_columns(task_csv, level):
     level_str = f"{level}.0back"
     match_acc = [col for col in task_csv.columns if f'match_{level_str}' in col and 'acc' in col and 'mismatch' not in col and 'nogo' not in col]
     mismatch_acc = [col for col in task_csv.columns if f'mismatch_{level_str}' in col and 'acc' in col and 'nogo' not in col]
-    match_omiss = [col for col in task_csv.columns if f'match_{level_str}' in col and 'omission_rate' in col and 'mismatch' not in col]
-    mismatch_omiss = [col for col in task_csv.columns if f'mismatch_{level_str}' in col and 'omission_rate' in col]
+    omiss = [col for col in task_csv.columns if 'omission_rate' in col]
     return {
         'match_acc': match_acc,
         'mismatch_acc': mismatch_acc,
-        'match_omiss': match_omiss,
-        'mismatch_omiss': mismatch_omiss,
+        'omission_rate': omiss,
     }
 
 def _nback_flag_independent_accuracy(exclusion_df, subject_id, row, level, cols):
-    mismatch_threshold = {1: MISMATCH_1_BACK_THRESHOLD, 2: MISMATCH_2_BACK_THRESHOLD, 3: MISMATCH_3_BACK_THRESHOLD}[level]
-    match_threshold = {1: MATCH_1_BACK_THRESHOLD, 2: MATCH_2_BACK_THRESHOLD, 3: MATCH_3_BACK_THRESHOLD}[level]
-    # Flag mismatch accuracy below threshold
+    # Flag mismatch accuracy below threshold (use full column name)
     for mismatch_col in cols['mismatch_acc']:
         val = row[mismatch_col]
-        if compare_to_threshold(f'mismatch_{level}.0back_acc', val, mismatch_threshold):
+        if compare_to_threshold(mismatch_col, val, MISMATCH_THRESHOLD):
             exclusion_df = append_exclusion_row(
-                exclusion_df, subject_id, f'mismatch_{level}.0back_acc', val, mismatch_threshold
+                exclusion_df, subject_id, mismatch_col, val, MISMATCH_THRESHOLD
             )
-    # Flag match accuracy below threshold
+    # Flag match accuracy below threshold (use full column name)
     for match_col in cols['match_acc']:
         val = row[match_col]
-        if compare_to_threshold(f'match_{level}.0back_acc', val, match_threshold):
+        if compare_to_threshold(match_col, val, MATCH_THRESHOLD):
             exclusion_df = append_exclusion_row(
-                exclusion_df, subject_id, f'match_{level}.0back_acc', val, match_threshold
+                exclusion_df, subject_id, match_col, val, MATCH_THRESHOLD
             )
     return exclusion_df
 
 def _nback_flag_omission_rates(exclusion_df, subject_id, row, level, cols):
-    for match_om_col in cols['match_omiss']:
-        val = row[match_om_col]
-        if compare_to_threshold(f'match_{level}.0back_omission_rate', val, OMISSION_RATE_THRESHOLD):
+    for omiss_col in cols['omission_rate']:
+        val = row[omiss_col]
+        if compare_to_threshold(omiss_col, val, OMISSION_RATE_THRESHOLD):
             exclusion_df = append_exclusion_row(
-                exclusion_df, subject_id, f'match_{level}.0back_omission_rate', val, OMISSION_RATE_THRESHOLD
-            )
-    for mismatch_om_col in cols['mismatch_omiss']:
-        val = row[mismatch_om_col]
-        if compare_to_threshold(f'mismatch_{level}.0back_omission_rate', val, OMISSION_RATE_THRESHOLD):
-            exclusion_df = append_exclusion_row(
-                exclusion_df, subject_id, f'mismatch_{level}.0back_omission_rate', val, OMISSION_RATE_THRESHOLD
+                exclusion_df, subject_id, omiss_col, val, OMISSION_RATE_THRESHOLD
             )
     return exclusion_df
 
