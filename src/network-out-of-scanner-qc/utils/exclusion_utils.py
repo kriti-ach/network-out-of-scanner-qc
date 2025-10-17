@@ -249,7 +249,7 @@ def check_other_exclusion_criteria(task_name, task_csv, exclusion_df):
                 value = row[col_name]
                 if compare_to_threshold(col_name, value, ACC_THRESHOLD):
                     exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, ACC_THRESHOLD)
-            if col_name in omission_rate_cols:
+            if ('n_back' not in task_name) and (col_name in omission_rate_cols): # N-back tasks handle omission rates separately
                 value = row[col_name]
                 if compare_to_threshold(col_name, value, OMISSION_RATE_THRESHOLD):
                     exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, OMISSION_RATE_THRESHOLD)
