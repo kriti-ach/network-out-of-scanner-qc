@@ -203,7 +203,7 @@ def nback_get_columns(task_csv, level):
     level_str = f"{level}.0back"
     match_acc = [col for col in task_csv.columns if f'match_{level_str}' in col and 'acc' in col and 'mismatch' not in col and 'nogo' not in col]
     mismatch_acc = [col for col in task_csv.columns if f'mismatch_{level_str}' in col and 'acc' in col and 'nogo' not in col]
-    omiss = [col for col in task_csv.columns if 'omission_rate' in col]
+    omiss = [col for col in task_csv.columns if f'{level_str}_omission_rate' in col]
     return {
         'match_acc': match_acc,
         'mismatch_acc': mismatch_acc,
@@ -229,8 +229,6 @@ def nback_flag_independent_accuracy(exclusion_df, subject_id, row, level, cols):
 
 def nback_flag_omission_rates(exclusion_df, subject_id, row, level, cols):
     for omiss_col in cols['omission_rate']:
-        print(f'subject_id: {subject_id}')
-        print(f'omiss_col: {omiss_col}')
         val = row[omiss_col]
         if compare_to_threshold(omiss_col, val, OMISSION_RATE_THRESHOLD):
             exclusion_df = append_exclusion_row(
