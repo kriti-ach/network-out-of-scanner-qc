@@ -61,7 +61,9 @@ def append_exclusion_row(exclusion_df, subject_id, metric_name, metric_value, th
             (exclusion_df['metric'] == metric_name)
         ]
         if len(existing) > 0:
-            return exclusion_df
+            return exclusion_df  # Skip duplicate
+    
+    # Append new row
     exclusion_df = pd.concat([
         exclusion_df,
         pd.DataFrame({
@@ -110,10 +112,10 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
         for col_name in stop_fail_rt_cols:
             for col_name_go in go_rt_cols:
                 if prefix(col_name, 'stop_fail_rt') == prefix(col_name_go, 'go_rt'):
-                    value = row[col_name]
-                    value_go = row[col_name_go]
-                    if value > value_go:
-                        exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, value_go)
+                    stop_fail_rt = row[col_name]
+                    go_rt = row[col_name_go]
+                    if stop_fail_rt > go_rt:
+                        exclusion_df = append_exclusion_row(exclusion_df, subject_id, 'stop_fail_rt_greater_than_go_rt', stop_fail_rt, go_rt)
         # Check go_acc columns unless this is an N-back dual (N-back accuracy rules should own accuracy)
         if 'n_back' not in task_name:
             for col_name in go_acc_cols:
@@ -128,6 +130,7 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
                 exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, OMISSION_RATE_THRESHOLD)
 
     #sort by subject_id
+    print(exclusion_df['subject_id'].unique())
     exclusion_df = sort_subject_ids(exclusion_df)
     return exclusion_df
 
