@@ -112,10 +112,11 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
         for col_name in stop_fail_rt_cols:
             for col_name_go in go_rt_cols:
                 if prefix(col_name, 'stop_fail_rt') == prefix(col_name_go, 'go_rt'):
+                    metric_name = f"{prefix(col_name, 'stop_fail_rt')}_stop_fail_rt_greater_than_go_rt"
                     stop_fail_rt = row[col_name]
                     go_rt = row[col_name_go]
                     if stop_fail_rt > go_rt:
-                        exclusion_df = append_exclusion_row(exclusion_df, subject_id, 'stop_fail_rt_greater_than_go_rt', stop_fail_rt, go_rt)
+                        exclusion_df = append_exclusion_row(exclusion_df, subject_id, metric_name, stop_fail_rt, go_rt)
         # Check go_acc columns unless this is an N-back dual (N-back accuracy rules should own accuracy)
         if 'n_back' not in task_name:
             for col_name in go_acc_cols:
@@ -202,8 +203,8 @@ def nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv):
     """
     for level in [1, 2, 3]:
         level_str = f"{level}.0back"
-        mismatch_cols = [col for col in task_csv.columns if f'mismatch_{level_str}_' in col and 'acc' in col and 'nogo' not in col]
-        match_cols = [col for col in task_csv.columns if f'match_{level_str}_' in col and 'acc' in col and 'mismatch' not in col and 'nogo' not in col]
+        mismatch_cols = [col for col in task_csv.columns if f'mismatch_{level_str}_' in col and 'acc' in col and 'nogo' not in col and 'stop_fail' not in col]
+        match_cols = [col for col in task_csv.columns if f'match_{level_str}_' in col and 'acc' in col and 'mismatch' not in col and 'nogo' not in col and 'stop_fail' not in col]
 
         mismatch_map = {suffix(c, f"mismatch_{level_str}_"): c for c in mismatch_cols}
         match_map = {suffix(c, f"match_{level_str}_"): c for c in match_cols}
@@ -226,8 +227,8 @@ def nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv):
 
 def nback_get_columns(task_csv, level):
     level_str = f"{level}.0back"
-    match_acc = [col for col in task_csv.columns if f'match_{level_str}' in col and 'acc' in col and 'mismatch' not in col and 'nogo' not in col]
-    mismatch_acc = [col for col in task_csv.columns if f'mismatch_{level_str}' in col and 'acc' in col and 'nogo' not in col]
+    match_acc = [col for col in task_csv.columns if f'match_{level_str}' in col and 'acc' in col and 'mismatch' not in col and 'nogo' not in col and 'stop_fail' not in col]
+    mismatch_acc = [col for col in task_csv.columns if f'mismatch_{level_str}' in col and 'acc' in col and 'nogo' not in col and 'stop_fail' not in col]
     omiss = [col for col in task_csv.columns if f'{level_str}_omission_rate' in col]
     return {
         'match_acc': match_acc,
