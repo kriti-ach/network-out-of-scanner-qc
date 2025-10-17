@@ -229,6 +229,7 @@ def nback_flag_independent_accuracy(exclusion_df, subject_id, row, level, cols):
 
 def nback_flag_omission_rates(exclusion_df, subject_id, row, level, cols):
     for omiss_col in cols['omission_rate']:
+        print(f'omiss_col: {omiss_col}')
         val = row[omiss_col]
         if compare_to_threshold(omiss_col, val, OMISSION_RATE_THRESHOLD):
             exclusion_df = append_exclusion_row(
