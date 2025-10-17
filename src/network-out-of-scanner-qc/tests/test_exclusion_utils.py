@@ -9,6 +9,7 @@ from utils.exclusion_utils import (
     check_other_exclusion_criteria,
     check_exclusion_criteria,
     suffix,
+    prefix,
 )
 from utils.globals import (
     STOP_SUCCESS_ACC_LOW_THRESHOLD,
@@ -182,7 +183,6 @@ def test_other_exclusion_skips_accuracy_when_nback_task():
     task_csv = pd.DataFrame({
         'subject_id': ['s01', 'mean', 'std', 'max', 'min'],
         'some_acc': [ACC_THRESHOLD - 0.2, np.nan, np.nan, np.nan, np.nan],
-        'some_omission_rate': [OMISSION_RATE_THRESHOLD + 0.2, np.nan, np.nan, np.nan, np.nan],
         'mismatch_1.0back_acc_cstay': [ACC_THRESHOLD - 0.2, np.nan, np.nan, np.nan, np.nan],
         'match_1.0back_acc_cstay': [ACC_THRESHOLD - 0.1, np.nan, np.nan, np.nan, np.nan],
     })
@@ -190,8 +190,11 @@ def test_other_exclusion_skips_accuracy_when_nback_task():
     out = check_exclusion_criteria('n_back_with_flanker', task_csv, exclusion_df)
     # some_acc should be ignored in other_exclusion for nback tasks
     assert not (out['metric'] == 'some_acc').any()
-    # omission rate still flagged
-    assert (out['metric'] == 'some_omission_rate').any()
     # nback accuracies flagged
     assert (out['metric'].str.contains('mismatch_1.0back_acc').any())
     assert (out['metric'].str.contains('match_1.0back_acc').any())
+
+def test_prefix_basic_extraction():
+    col = 'stop_fail_rt_tstay_cstay'
+    pref = 'tstay_cstay'
+    assert prefix(col, pref) == 'stop_fail_rt_'

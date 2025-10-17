@@ -19,9 +19,21 @@ from utils.globals import (
     ACC_THRESHOLD,
     OMISSION_RATE_THRESHOLD,
     NOGO_STOP_SUCCESS_MIN,
-    SUMMARY_ROWS
+    SUMMARY_ROWS,
+    GO_RT_THRESHOLD_DUAL_TASK
 )
-from utils.qc_utils import sort_subject_ids
+from utils.qc_utils import sort_subject_ids, is_dual_task
+
+# Build maps by condition suffix to require same non-nback condition (e.g., flanker congruency, cuedTS state)
+def suffix(col: str, prefix: str) -> str:
+    # Everything after the prefix, preserves full condition detail
+    idx = col.find(prefix)
+    return col[idx + len(prefix):] if idx != -1 else col
+
+def prefix(col: str, prefix: str) -> str:
+    # Everything before the prefix, preserves full condition detail
+    idx = col.find(prefix)
+    return col[:idx] if idx != -1 else col
 
 def check_exclusion_criteria(task_name, task_csv, exclusion_df):
         if 'stop_signal' in task_name:
@@ -41,7 +53,15 @@ def compare_to_threshold(metric_name, metric_value, threshold):
     return metric_value < threshold if 'low' in metric_name or 'acc' in metric_name else metric_value > threshold
 
 def append_exclusion_row(exclusion_df, subject_id, metric_name, metric_value, threshold):
-    """Append a new exclusion row to the exclusion dataframe."""
+    """Append a new exclusion row to the exclusion dataframe, avoiding duplicates."""
+    # Check if this subject+metric combination already exists
+    if len(exclusion_df) > 0:
+        existing = exclusion_df[
+            (exclusion_df['subject_id'] == subject_id) & 
+            (exclusion_df['metric'] == metric_name)
+        ]
+        if len(existing) > 0:
+            return exclusion_df
     exclusion_df = pd.concat([
         exclusion_df,
         pd.DataFrame({
@@ -66,6 +86,7 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
         go_rt_cols = [col for col in task_csv.columns if 'go_rt' in col]
         go_acc_cols = [col for col in task_csv.columns if 'go_acc' in col]
         go_omission_rate_cols = [col for col in task_csv.columns if 'go_omission_rate' in col]
+        stop_fail_rt_cols = [col for col in task_csv.columns if 'stop_fail_rt' in col]
         
         # Check stop_success specifically for low and high thresholds
         for col_name in stop_success_cols:
@@ -82,9 +103,17 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
         # Check go_rt columns
         for col_name in go_rt_cols:
             value = row[col_name]
-            if compare_to_threshold('go_rt', value, GO_RT_THRESHOLD):
+            if compare_to_threshold('go_rt', value, GO_RT_THRESHOLD if not is_dual_task(task_name) else GO_RT_THRESHOLD_DUAL_TASK):
                 exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, GO_RT_THRESHOLD)
 
+        # Check if stop fail rt > go rt if the prefix is the same
+        for col_name in stop_fail_rt_cols:
+            for col_name_go in go_rt_cols:
+                if prefix(col_name, 'stop_fail_rt') == prefix(col_name_go, 'go_rt'):
+                    value = row[col_name]
+                    value_go = row[col_name_go]
+                    if value > value_go:
+                        exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, value_go)
         # Check go_acc columns unless this is an N-back dual (N-back accuracy rules should own accuracy)
         if 'n_back' not in task_name:
             for col_name in go_acc_cols:
@@ -162,12 +191,6 @@ def check_n_back_exclusion_criteria(task_name, task_csv, exclusion_df):
         exclusion_df = sort_subject_ids(exclusion_df)
     return exclusion_df
 
-# Build maps by condition suffix to require same non-nback condition (e.g., flanker congruency, cuedTS state)
-def suffix(col: str, prefix: str) -> str:
-    # Everything after the prefix, preserves full condition detail
-    idx = col.find(prefix)
-    return col[idx + len(prefix):] if idx != -1 else col
-
 def nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv):
     """Flag N-back combined condition where both mismatch and match accuracies
     fall below their respective combined thresholds for a given level.
@@ -242,7 +265,7 @@ def check_other_exclusion_criteria(task_name, task_csv, exclusion_df):
             continue
         subject_id = row['subject_id']
         for col_name in task_csv.columns:
-            acc_cols = [col for col in task_csv.columns if 'acc' in col and 'nogo' not in col]
+            acc_cols = [col for col in task_csv.columns if 'acc' in col and 'nogo' not in col and 'stop_fail' not in col]
             omission_rate_cols = [col for col in task_csv.columns if 'omission_rate' in col]
             # If this task includes N-back, let N-back rules handle accuracy; still apply other tasks' omission rules
             if ('n_back' not in task_name) and (col_name in acc_cols):
