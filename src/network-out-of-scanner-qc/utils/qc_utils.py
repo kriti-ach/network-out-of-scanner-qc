@@ -405,7 +405,11 @@ def filter_to_test_trials(df, task_name):
     return df[df['trial_id'] == 'test_trial']
 
 def sort_subject_ids(df):
-    df['subject_id_numeric'] = df['subject_id'].str.replace('s', '').astype(int)
+    # Only process rows where subject_id is a string starting with 's'
+    df = df.copy()
+    df['subject_id_numeric'] = df['subject_id'].apply(
+        lambda x: int(x.replace('s', '')) if isinstance(x, str) and x.startswith('s') else float('inf')
+    )
     df = df.sort_values(by='subject_id_numeric', ascending=True)
     df = df.drop(columns=['subject_id_numeric'])
     return df

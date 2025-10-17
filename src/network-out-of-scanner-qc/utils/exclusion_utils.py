@@ -130,7 +130,6 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
                 exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, OMISSION_RATE_THRESHOLD)
 
     #sort by subject_id
-    print(exclusion_df['subject_id'].unique())
     exclusion_df = sort_subject_ids(exclusion_df)
     return exclusion_df
 
@@ -267,18 +266,27 @@ def check_other_exclusion_criteria(task_name, task_csv, exclusion_df):
         if index >= len(task_csv) - SUMMARY_ROWS:
             continue
         subject_id = row['subject_id']
-        for col_name in task_csv.columns:
-            acc_cols = [col for col in task_csv.columns if 'acc' in col and 'nogo' not in col and 'stop_fail' not in col]
-            omission_rate_cols = [col for col in task_csv.columns if 'omission_rate' in col]
-            # If this task includes N-back, let N-back rules handle accuracy; still apply other tasks' omission rules
-            if ('n_back' not in task_name) and (col_name in acc_cols):
+        
+        # Get all accuracy and omission rate columns
+        acc_cols = [col for col in task_csv.columns if 'acc' in col and 'nogo' not in col and 'stop_fail' not in col]
+        omission_rate_cols = [col for col in task_csv.columns if 'omission_rate' in col]
+        
+        # If this task includes N-back, let N-back rules handle accuracy; still apply other tasks' omission rules
+        if 'n_back' not in task_name:
+            # Check accuracy columns only if this is not an N-back task
+            for col_name in acc_cols:
                 value = row[col_name]
                 if compare_to_threshold(col_name, value, ACC_THRESHOLD):
                     exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, ACC_THRESHOLD)
-            if ('n_back' not in task_name) and (col_name in omission_rate_cols): # N-back tasks handle omission rates separately
+        
+        # Check omission rate columns (but exclude N-back specific omission rates)
+        for col_name in omission_rate_cols:
+            # Skip N-back specific omission rates (they are handled by N-back exclusion criteria)
+            if 'back' not in col_name.lower():
                 value = row[col_name]
                 if compare_to_threshold(col_name, value, OMISSION_RATE_THRESHOLD):
                     exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, OMISSION_RATE_THRESHOLD)
+    
     #sort by subject_id
     if len(exclusion_df) != 0:
         exclusion_df = sort_subject_ids(exclusion_df)
