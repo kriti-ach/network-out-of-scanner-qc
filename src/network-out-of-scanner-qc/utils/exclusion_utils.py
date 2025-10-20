@@ -341,10 +341,10 @@ def check_other_exclusion_criteria(task_name, task_csv, exclusion_df):
     return exclusion_df
 
 def remove_some_flags_for_exclusion(task_name, exclusion_df):
-    if 'stop_fail_rt_greater_than_go_rt' in exclusion_df['metric'].values:
-        exclusion_df = exclusion_df[~exclusion_df['metric'].str.contains('stop_fail_rt_greater_than_go_rt')]
+    # Remove rows where metric contains 'stop_fail_rt_greater_than_go_rt'
+    exclusion_df = exclusion_df[~exclusion_df['metric'].str.contains('stop_fail_rt_greater_than_go_rt', na=False)]
     
-    if '3.0back' in exclusion_df['metric'].values:
-        exclusion_df = exclusion_df[~exclusion_df['metric'].str.contains('3.0back_omission_rate')]
+    # Remove rows where metric contains '3.0back_omission_rate'
+    exclusion_df = exclusion_df[~exclusion_df['metric'].str.contains('3.0back', na=False)]
     
     return exclusion_df
