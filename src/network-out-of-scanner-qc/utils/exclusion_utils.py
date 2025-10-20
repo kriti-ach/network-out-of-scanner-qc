@@ -339,3 +339,12 @@ def check_other_exclusion_criteria(task_name, task_csv, exclusion_df):
     if len(exclusion_df) != 0:
         exclusion_df = sort_subject_ids(exclusion_df)
     return exclusion_df
+
+def remove_some_flags_for_exclusion(task_name, exclusion_df):
+    if 'stop_fail_rt_greater_than_go_rt' in exclusion_df['metric'].values:
+        exclusion_df = exclusion_df[~exclusion_df['metric'].str.contains('stop_fail_rt_greater_than_go_rt')]
+    
+    if '3.0back' in exclusion_df['metric'].values:
+        exclusion_df = exclusion_df[~exclusion_df['metric'].str.contains('3.0back_omission_rate')]
+    
+    return exclusion_df

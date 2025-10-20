@@ -15,7 +15,7 @@ from utils.qc_utils import (
 )
 from utils.violations_utils import compute_violations, aggregate_violations, plot_violations, create_violations_matrices
 from utils.globals import SINGLE_TASKS_FMRI, DUAL_TASKS_FMRI, SINGLE_TASKS_OUT_OF_SCANNER, DUAL_TASKS_OUT_OF_SCANNER
-from utils.exclusion_utils import check_exclusion_criteria
+from utils.exclusion_utils import check_exclusion_criteria, remove_some_flags_for_exclusion
 
 # folder_path = Path("/oak/stanford/groups/russpold/data/network_grant/validation_BIDS/")
 # output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/qc_by_task/")
@@ -68,7 +68,7 @@ for task in SINGLE_TASKS_OUT_OF_SCANNER + DUAL_TASKS_OUT_OF_SCANNER:
     task_csv = pd.read_csv(output_path / f"{task}_qc.csv")
     exclusion_df = check_exclusion_criteria(task, task_csv, exclusion_df)
     exclusion_df.to_csv(flags_output_path / f"flagged_data_{task}.csv", index=False)
-    #exclusion_df = remove_some_flags(task, exclusion_df)
+    exclusion_df = remove_some_flags_for_exclusion(task, exclusion_df)
     exclusion_df.to_csv(exclusions_output_path / f"excluded_data_{task}.csv", index=False)
         
 violations_df.to_csv(violations_output_path / 'violations_data.csv', index=False)
