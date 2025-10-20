@@ -97,7 +97,6 @@ def get_match_mismatch_columns_by_condition(task_csv, condition_type, metric_typ
             cols = [col for col in task_csv.columns if f'match_{load_str}_' in col and metric_type in col and 'mismatch' not in col and 'stop_fail' not in col]
         else:  # mismatch
             cols = [col for col in task_csv.columns if f'mismatch_{load_str}_' in col and metric_type in col and 'stop_fail' not in col]
-        print(f"cols: {cols}")
         # Group by condition suffix (e.g., congruent, incongruent)
         for col in cols:
             if condition_type == 'match':
@@ -161,14 +160,19 @@ def check_collapsed_stop_signal_metrics(exclusion_df, subject_id, row, task_csv,
         
         # Find common conditions between match and mismatch
         common_conditions = set(match_groups.keys()) & set(mismatch_groups.keys())
+        print(f"common_conditions: {common_conditions}")
+        print(f"match_groups: {match_groups}")
+        print(f"mismatch_groups: {mismatch_groups}")
         
         for condition in common_conditions:
             # Collapse match metrics across load levels for this condition
             collapsed_match_value = collapse_metrics_across_loads(row, match_groups[condition], f'match_{metric_type}')
-            
+            print(f'metric_type: {metric_type}')
+            print(f"collapsed_match_value: {collapsed_match_value}")
             # Collapse mismatch metrics across load levels for this condition  
             collapsed_mismatch_value = collapse_metrics_across_loads(row, mismatch_groups[condition], f'mismatch_{metric_type}')
-            
+            print(f'metric_type: {metric_type}')
+            print(f"collapsed_mismatch_value: {collapsed_mismatch_value}")
             # Apply thresholds based on metric type
             if metric_type == 'stop_success':
                 if collapsed_match_value is not None:
@@ -240,7 +244,6 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
         stop_fail_rt_cols = [col for col in task_csv.columns if 'stop_fail_rt' in col]
         
         if is_stop_nback:
-            print(f"is_stop_nback in stop_signal_exclusion_criteria: {is_stop_nback}")
             # For stop+nback tasks, collapse across load levels separately for match and mismatch conditions
             exclusion_df = check_collapsed_stop_signal_metrics(exclusion_df, subject_id, row, task_csv, task_name)
         else:
@@ -341,7 +344,6 @@ def check_n_back_exclusion_criteria(task_name, task_csv, exclusion_df):
         is_stop_nback = 'stop_signal' in task_name and 'n_back' in task_name
 
         if is_stop_nback:
-            print(f"is_stop_nback in n_back_exclusion_criteria: {is_stop_nback}")
             # For stop+nback tasks, collapse across load levels
             exclusion_df = check_collapsed_match_mismatch_accuracy(exclusion_df, subject_id, row, task_csv)
         else:
