@@ -84,10 +84,10 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
 
         # Get actual column names for each metric type
         stop_success_cols = [col for col in task_csv.columns if 'stop_success' in col]
-        go_rt_cols = [col for col in task_csv.columns if 'go_rt' in col and 'collapsed' not in col]
-        go_acc_cols = [col for col in task_csv.columns if 'go_acc' in col and 'collapsed' not in col]
-        go_omission_rate_cols = [col for col in task_csv.columns if 'go_omission_rate' in col and 'collapsed' not in col]
-        stop_fail_rt_cols = [col for col in task_csv.columns if 'stop_fail_rt' in col and 'collapsed' not in col]
+        go_rt_cols = [col for col in task_csv.columns if 'go_rt' in col]
+        go_acc_cols = [col for col in task_csv.columns if 'go_acc' in col]
+        go_omission_rate_cols = [col for col in task_csv.columns if 'go_omission_rate' in col]
+        stop_fail_rt_cols = [col for col in task_csv.columns if 'stop_fail_rt' in col]
             # Check stop_success specifically for low and high thresholds
         for col_name in stop_success_cols:
             value = row[col_name]
@@ -141,9 +141,9 @@ def check_go_nogo_exclusion_criteria(task_name, task_csv, exclusion_df):
         subject_id = row['subject_id']
 
         # Get actual column names for each metric type
-        go_acc_cols = [col for col in task_csv.columns if 'go' in col and 'acc' in col and 'nogo' not in col and 'collapsed' not in col]
-        nogo_acc_cols = [col for col in task_csv.columns if 'nogo' in col and 'acc' in col and 'collapsed' not in col]
-        go_omission_rate_cols = [col for col in task_csv.columns if 'go' in col and 'omission_rate' in col and 'nogo' not in col and 'collapsed' not in col]
+        go_acc_cols = [col for col in task_csv.columns if 'go' in col and 'acc' in col and 'nogo' not in col]
+        nogo_acc_cols = [col for col in task_csv.columns if 'nogo' in col and 'acc' in col]
+        go_omission_rate_cols = [col for col in task_csv.columns if 'go' in col and 'omission_rate' in col and 'nogo' not in col]
 
         # If go accuracy < threshold AND nogo accuracy < threshold, then exclude
         # Only check when the prefix (before go_acc/nogo_acc) matches
