@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import pytest
 from utils.exclusion_utils import (
     compare_to_threshold,
     append_exclusion_row,
@@ -135,17 +136,17 @@ def test_suffix_complex_suffix_parts():
 
 
 def test_nback_dual_ignores_non_nback_accuracy_and_checks_others():
-    # Task includes n_back; accuracy should be driven by n-back only, but other metrics (e.g., omission) still apply
+    # Task includes n_back; accuracy should be driven by n-back only, but other metrics (e.g., omission) still apply                                                                                              
     task_csv = pd.DataFrame({
         'subject_id': ['s01', 'mean', 'std', 'max', 'min'],
         'go_rt': [GO_RT_THRESHOLD + 10, np.nan, np.nan, np.nan, np.nan],
-        'go_acc': [ACC_THRESHOLD - 0.2, np.nan, np.nan, np.nan, np.nan],  # Should be ignored due to n_back
-        'go_omission_rate': [OMISSION_RATE_THRESHOLD + 0.2, np.nan, np.nan, np.nan, np.nan],  # Should be checked
+        'go_acc': [ACC_THRESHOLD - 0.2, np.nan, np.nan, np.nan, np.nan],  # Should be ignored due to n_back                                                                                                       
+        'go_omission_rate': [OMISSION_RATE_THRESHOLD + 0.2, np.nan, np.nan, np.nan, np.nan],  # Should be checked                                                                                                 
         'mismatch_1.0back_acc_cstay': [ACC_THRESHOLD - 0.2, np.nan, np.nan, np.nan, np.nan],
         'match_1.0back_acc_cstay': [ACC_THRESHOLD - 0.1, np.nan, np.nan, np.nan, np.nan],
     })
     exclusion_df = pd.DataFrame({'subject_id': [], 'metric': [], 'metric_value': [], 'threshold': []})
-    out = check_exclusion_criteria('stop_signal_with_n_back_and_flanker', task_csv, exclusion_df)
+    out = check_exclusion_criteria('n_back_with_flanker', task_csv, exclusion_df)
     # Should include nback accuracy flags and omission_rate, but not generic go_acc
     assert (out['metric'].str.contains('mismatch_1.0back_acc').any())
     assert (out['metric'].str.contains('match_1.0back_acc').any())
@@ -198,3 +199,65 @@ def test_prefix_basic_extraction():
     col = 'stop_fail_rt_tstay_cstay'
     pref = 'tstay_cstay'
     assert prefix(col, pref) == 'stop_fail_rt_'
+
+
+def test_stop_nback_collapsed_metrics():
+    """Test that stop+nback tasks collapse ALL metrics across load levels."""
+    # Create test data with multiple load levels for stop signal and N-back metrics
+    task_csv = pd.DataFrame({
+        'subject_id': ['s01', 'mean', 'std', 'max', 'min'],
+        # Stop signal metrics across load levels
+        '1.0back_stop_success': [0.2, np.nan, np.nan, np.nan, np.nan],  # Below threshold
+        '2.0back_stop_success': [0.3, np.nan, np.nan, np.nan, np.nan],  # Below threshold
+        '3.0back_stop_success': [0.1, np.nan, np.nan, np.nan, np.nan],  # Below threshold
+        '1.0back_go_rt': [900, np.nan, np.nan, np.nan, np.nan],  # Above threshold
+        '2.0back_go_rt': [950, np.nan, np.nan, np.nan, np.nan],  # Above threshold
+        '3.0back_go_rt': [1000, np.nan, np.nan, np.nan, np.nan],  # Above threshold
+        '1.0back_go_omission_rate': [0.3, np.nan, np.nan, np.nan, np.nan],  # Above threshold
+        '2.0back_go_omission_rate': [0.4, np.nan, np.nan, np.nan, np.nan],  # Above threshold
+        '3.0back_go_omission_rate': [0.5, np.nan, np.nan, np.nan, np.nan],  # Above threshold
+        '1.0back_stop_fail_rt': [1200, np.nan, np.nan, np.nan, np.nan],  # Above go_rt
+        '2.0back_stop_fail_rt': [1300, np.nan, np.nan, np.nan, np.nan],  # Above go_rt
+        '3.0back_stop_fail_rt': [1400, np.nan, np.nan, np.nan, np.nan],  # Above go_rt
+        # N-back specific metrics
+        'mismatch_1.0back_congruent_acc': [0.6, np.nan, np.nan, np.nan, np.nan],  # Below 70%
+        'mismatch_2.0back_congruent_acc': [0.5, np.nan, np.nan, np.nan, np.nan],  # Below 70%
+        'mismatch_3.0back_congruent_acc': [0.4, np.nan, np.nan, np.nan, np.nan],  # Below 70%
+        'match_1.0back_congruent_acc': [0.15, np.nan, np.nan, np.nan, np.nan],    # Below 20%
+        'match_2.0back_congruent_acc': [0.1, np.nan, np.nan, np.nan, np.nan],     # Below 20%
+        'match_3.0back_congruent_acc': [0.05, np.nan, np.nan, np.nan, np.nan],    # Below 20%
+    })
+    
+    exclusion_df = pd.DataFrame({'subject_id': [], 'metric': [], 'metric_value': [], 'threshold': []})
+    out = check_exclusion_criteria('stop_signal_n_back', task_csv, exclusion_df)
+    
+    # Should have collapsed stop signal metrics
+    assert (out['metric'] == 'collapsed_stop_success_low').any()
+    assert (out['metric'] == 'collapsed_go_rt').any()
+    assert (out['metric'] == 'collapsed_go_omission_rate').any()
+    assert (out['metric'] == 'collapsed_stop_fail_rt_greater_than_go_rt').any()
+    
+    # Should have collapsed N-back accuracy metrics
+    assert (out['metric'] == 'collapsed_mismatch_acc_combined').any()
+    assert (out['metric'] == 'collapsed_match_acc_combined').any()
+    assert (out['metric'] == 'collapsed_mismatch_acc').any()
+    assert (out['metric'] == 'collapsed_match_acc').any()
+    
+    # Check that collapsed values are means across loads
+    stop_success_row = out[out['metric'] == 'collapsed_stop_success_low'].iloc[0]
+    expected_stop_success = (0.2 + 0.3 + 0.1) / 3  # Mean across loads 1, 2, 3
+    assert stop_success_row['metric_value'] == pytest.approx(expected_stop_success)
+    
+    go_rt_row = out[out['metric'] == 'collapsed_go_rt'].iloc[0]
+    expected_go_rt = (900 + 950 + 1000) / 3  # Mean across loads 1, 2, 3
+    assert go_rt_row['metric_value'] == pytest.approx(expected_go_rt)
+    
+    go_omission_row = out[out['metric'] == 'collapsed_go_omission_rate'].iloc[0]
+    expected_go_omission = (0.3 + 0.4 + 0.5) / 3  # Mean across loads 1, 2, 3
+    assert go_omission_row['metric_value'] == pytest.approx(expected_go_omission)
+    
+    # Check stop_fail_rt > go_rt comparison
+    stop_fail_rt_row = out[out['metric'] == 'collapsed_stop_fail_rt_greater_than_go_rt'].iloc[0]
+    expected_stop_fail_rt = (1200 + 1300 + 1400) / 3  # Mean across loads 1, 2, 3
+    assert stop_fail_rt_row['metric_value'] == pytest.approx(expected_stop_fail_rt)
+    assert stop_fail_rt_row['threshold'] == pytest.approx(expected_go_rt)  # threshold should be go_rt
