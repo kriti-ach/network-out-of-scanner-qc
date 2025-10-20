@@ -741,9 +741,9 @@ def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_cond
             for delay in df['delay'].unique():
                 if paired_conditions is not None:
                     for paired_condition in paired_conditions:
-                    col_prefix = f"{n_back_condition}_{delay}back_{paired_condition}"
-                    mask_acc = (df['n_back_condition'].str.lower() == n_back_condition) & (df['delay'] == delay) & (df[paired_task_col].str.lower() == paired_condition.lower())
-                    calculate_go_nogo_metrics(df, mask_acc, col_prefix, metrics)
+                        col_prefix = f"{n_back_condition}_{delay}back_{paired_condition}"
+                        mask_acc = (df['n_back_condition'].str.lower() == n_back_condition) & (df['delay'] == delay) & (df[paired_task_col].str.lower() == paired_condition.lower())
+                        calculate_go_nogo_metrics(df, mask_acc, col_prefix, metrics)
         return metrics
     if paired_task_col is None:
         # Single n-back: iterate over n_back_condition and delay
