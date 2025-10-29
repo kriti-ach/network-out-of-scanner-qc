@@ -35,6 +35,7 @@ def prefix(col: str, prefix: str) -> str:
     idx = col.find(prefix)
     return col[:idx] if idx != -1 else col
 
+
 def check_exclusion_criteria(task_name, task_csv, exclusion_df):
         if 'stop_signal' in task_name:
             exclusion_df = check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df)

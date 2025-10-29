@@ -16,41 +16,86 @@ from utils.qc_utils import (
 from utils.violations_utils import compute_violations, aggregate_violations, plot_violations, create_violations_matrices
 from utils.globals import SINGLE_TASKS_FMRI, DUAL_TASKS_FMRI, SINGLE_TASKS_OUT_OF_SCANNER, DUAL_TASKS_OUT_OF_SCANNER
 from utils.exclusion_utils import check_exclusion_criteria, remove_some_flags_for_exclusion
+from utils.config import load_config
 
-# folder_path = Path("/oak/stanford/groups/russpold/data/network_grant/validation_BIDS/")
-# output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/qc_by_task/")
+cfg = load_config()
+input_root = cfg.input_folder
+output_path = cfg.qc_output_folder
+flags_output_path = cfg.flags_output_folder
+exclusions_output_path = cfg.exclusions_output_folder
+violations_output_path = cfg.violations_output_folder
 
-folder_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/out_of_scanner")
-output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/out_of_scanner_qc")
-flags_output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/out_of_scanner_flags")
-exclusions_output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/out_of_scanner_exclusions")
-violations_output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/out_of_scanner_violations")
+def infer_task_name_from_filename(fname: str) -> str | None:
+    name = fname.lower()
+    # Ignore practice files by caller
+    parts = []
+    if 'stop_signal' in name:
+        parts.append('stop_signal')
+    if 'go_nogo' in name:
+        parts.append('go_nogo')
+    if 'flanker' in name:
+        parts.append('flanker')
+    if 'shape_matching' in name:
+        parts.append('shape_matching')
+    if 'directed_forgetting' in name:
+        parts.append('directed_forgetting')
+    if 'spatial_task_switching' in name:
+        parts.append('spatial_task_switching')
+    if 'cued_task_switching' in name or 'cuedts' in name:
+        parts.append('cued_task_switching')
+    if 'n_back' in name or 'nback' in name:
+        parts.append('n_back')
+    if not parts:
+        return None
+    if len(parts) == 1:
+        return f"{parts[0]}_single_task_network"
+    # Dual task: stable canonical order with 'with'
+    # Prefer stop_signal first if present, else lexicographic for consistency
+    if 'stop_signal' in parts:
+        first = 'stop_signal'
+        parts.remove('stop_signal')
+        second = parts[0]
+    else:
+        parts = sorted(parts)
+        first, second = parts[0], parts[1]
+    return f"{first}_with_{second}"
+
+if cfg.is_fmri:
+    # Discover tasks from filenames first (exclude practice)
+    discovered_tasks = set()
+    for subj_dir in glob.glob(str(input_root / 's*')):
+        for ses_dir in glob.glob(str(Path(subj_dir) / 'ses-*')):
+            for file in glob.glob(str(Path(ses_dir) / '*.csv')):
+                if '/practice/' in file.lower():
+                    continue
+                tname = infer_task_name_from_filename(Path(file).name)
+                if tname:
+                    discovered_tasks.add(tname)
+    tasks = sorted(discovered_tasks)
+else:
+    tasks = (SINGLE_TASKS_OUT_OF_SCANNER + DUAL_TASKS_OUT_OF_SCANNER)
 
 # Initialize QC CSVs for all tasks
-initialize_qc_csvs(SINGLE_TASKS_OUT_OF_SCANNER + DUAL_TASKS_OUT_OF_SCANNER, output_path)
+initialize_qc_csvs(tasks, output_path)
 
 violations_df = pd.DataFrame()
-for subject_folder in glob.glob(str(folder_path / "s*")):
-    subject_id = Path(subject_folder).name
-    # if re.match(r"s\d{2,}", subject_id):
-    if re.match(r"s\d{2,}", subject_id):
-        print(f"Processing Subject: {subject_id}")
 
-        # for file in glob.glob(str(Path(subject_folder) / "*csv")):
-        for file in glob.glob(str(Path(subject_folder) / "*.csv")):
-            # session = Path(file).parent.parent.name
-            # run = Path(file).stem.split('_')[3]
-            filename = Path(file).name
-            task_name = extract_task_name_out_of_scanner(filename)
-            if task_name == 'stop_signal_with_go_no_go':
-                task_name = 'stop_signal_with_go_nogo'
-            # task_name = extract_task_name_fmri(filename)
-            
-            if task_name:
+if cfg.is_fmri:
+    # In-scanner (CSV per session) iterate and process, ignoring practice
+    for subj_dir in glob.glob(str(input_root / 's*')):
+        subject_id = Path(subj_dir).name
+        if not re.match(r"s\d{2,}", subject_id):
+            continue
+        for ses_dir in glob.glob(str(Path(subj_dir) / 'ses-*')):
+            for file in glob.glob(str(Path(ses_dir) / '*.csv')):
+                if '/practice/' in file.lower():
+                    continue
+                filename = Path(file).name
+                task_name = infer_task_name_from_filename(filename)
+                if not task_name:
+                    continue
                 try:
                     df = pd.read_csv(file)
-                    # df = pd.read_csv(file, sep='\t')
-                    # Normalize flanker conditions (remove h_ and f_ prefixes)
                     if 'flanker' in task_name and 'stop_signal' in task_name:
                         df = normalize_flanker_conditions(df)
                     metrics = get_task_metrics(df, task_name)
@@ -59,8 +104,31 @@ for subject_folder in glob.glob(str(folder_path / "s*")):
                     update_qc_csv(output_path, task_name, subject_id, metrics)
                 except Exception as e:
                     print(f"Error processing {task_name} for subject {subject_id}: {str(e)}")
+else:
+    # Out-of-scanner: iterate per subject and CSV files
+    for subject_folder in glob.glob(str(input_root / "s*")):
+        subject_id = Path(subject_folder).name
+        if re.match(r"s\d{2,}", subject_id):
+            print(f"Processing Subject: {subject_id}")
+            for file in glob.glob(str(Path(subject_folder) / "*.csv")):
+                filename = Path(file).name
+                task_name = extract_task_name_out_of_scanner(filename)
+                if task_name == 'stop_signal_with_go_no_go':
+                    task_name = 'stop_signal_with_go_nogo'
+                if task_name:
+                    try:
+                        df = pd.read_csv(file)
+                        # Normalize flanker conditions (remove h_ and f_ prefixes)
+                        if 'flanker' in task_name and 'stop_signal' in task_name:
+                            df = normalize_flanker_conditions(df)
+                        metrics = get_task_metrics(df, task_name)
+                        if 'stop_signal' in task_name:
+                            violations_df = pd.concat([violations_df, compute_violations(subject_id, df, task_name)])
+                        update_qc_csv(output_path, task_name, subject_id, metrics)
+                    except Exception as e:
+                        print(f"Error processing {task_name} for subject {subject_id}: {str(e)}")
 
-for task in SINGLE_TASKS_OUT_OF_SCANNER + DUAL_TASKS_OUT_OF_SCANNER:
+for task in tasks:
     exclusion_df = pd.DataFrame({'subject_id': [], 'metric': [], 'metric_value': [], 'threshold': []})
     append_summary_rows_to_csv(output_path / f"{task}_qc.csv")
     if task == 'flanker_with_cued_task_switching' or task == 'shape_matching_with_cued_task_switching':

@@ -40,29 +40,6 @@ DUAL_TASKS_OUT_OF_SCANNER = [
     "stop_signal_with_go_nogo"
 ]
 
-SINGLE_TASKS_FMRI = [
-    "cuedTS",
-    "directedForgetting",
-    "flanker",
-    "goNogo",
-    "nBack",
-    "spatialTS",
-    "shapeMatching",
-    "stopSignal"
-]
-
-DUAL_TASKS_FMRI = [
-    "directedForgettingWCuedTS",
-    "directedForgettingWFlanker",
-    "stopSignalWDirectedForgetting",
-    "stopSignalWFlanker",
-    "spatialTSWCuedTS",
-    "flankerWShapeMatching",
-    "cuedTSWFlanker",
-    "spatialTSWShapeMatching",
-    "nBackWShapeMatching",
-    "nBackWSpatialTS"
-]
 
 FLANKER_CONDITIONS = ['congruent', 'incongruent']
 DIRECTED_FORGETTING_CONDITIONS = ['con', 'pos', 'neg']
