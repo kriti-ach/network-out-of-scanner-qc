@@ -457,7 +457,8 @@ def calculate_acc(df, mask_acc):
     Returns:
         float: acc (mean of correct_trial)
     """
-    return df[mask_acc]['correct_trial'].mean() if len(df[mask_acc]) > 0 else np.nan
+    correct_col = 'correct' if 'correct' in df.columns else 'correct_trial'
+    return df[mask_acc][correct_col].mean() if len(df[mask_acc]) > 0 else np.nan
 
 def calculate_rt(df, mask_rt):
     """
@@ -542,9 +543,10 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict):
     Returns:
         None: Updates metrics_dict in place
     """
-    mask_rt = mask_acc & (df['correct_trial'] == 1)
+    correct_col = 'correct' if 'correct' in df.columns else 'correct_trial'
+    mask_rt = mask_acc & (df[correct_col] == 1)
     mask_omission = mask_acc & (df['key_press'] == -1)
-    mask_commission = mask_acc & (df['key_press'] != -1) & (df['correct_trial'] == 0)
+    mask_commission = mask_acc & (df['key_press'] != -1) & (df[correct_col] == 0)
     total_num_trials = len(df[mask_acc])
     
     metrics_dict[f'{cond_name}_acc'] = calculate_acc(df, mask_acc)
@@ -578,9 +580,10 @@ def calculate_go_nogo_metrics(df, mask_acc, cond_name, metrics_dict):
         # Don't calculate omission_rate or commission_rate for nogo
     else:
         # For go: calculate all metrics normally
-        mask_rt = mask_acc & (df['correct_trial'] == 1)
+        correct_col = 'correct' if 'correct' in df.columns else 'correct_trial'
+        mask_rt = mask_acc & (df[correct_col] == 1)
         mask_omission = mask_acc & (df['key_press'] == -1)
-        mask_commission = mask_acc & (df['key_press'] != -1) & (df['correct_trial'] == 0)
+        mask_commission = mask_acc & (df['key_press'] != -1) & (df[correct_col] == 0)
         total_num_trials = len(df[mask_acc])
         
         metrics_dict[f'{cond_name}_acc'] = calculate_acc(df, mask_acc)
@@ -768,7 +771,11 @@ def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_cond
                             condition = f"n_back_{n_back_condition}_{delay}back_shape_matching_{paired_cond.lower()}"
                         else:
                             condition = f"{n_back_condition}_{delay}back_{paired_cond.lower()}"
-                        mask_acc = (df['n_back_condition'].str.lower() == n_back_condition) & (df['delay'] == delay) & (df[paired_task_col].str.lower() == paired_cond.lower())
+                        # For in-scanner nback+spatialTS, use task_switch_condition when present
+                        effective_col = paired_task_col
+                        if paired_task_col == 'task_switch' and 'task_switch_condition' in df.columns:
+                            effective_col = 'task_switch_condition'
+                        mask_acc = (df['n_back_condition'].str.lower() == n_back_condition) & (df['delay'] == delay) & (df[effective_col].astype(str).str.lower() == paired_cond.lower())
                         calculate_basic_metrics(df, mask_acc, condition, metrics)
         if spatialts:
             add_category_accuracies(
@@ -998,8 +1005,9 @@ def get_task_metrics(df, task_name):
         elif ('n_back' in task_name and 'cued_task_switching' in task_name) or ('NBack' in task_name and 'CuedTS' in task_name):
             return compute_n_back_metrics(df, None, paired_task_col='task_switch', paired_conditions=None, cuedts=True)
         elif ('n_back' in task_name and 'spatial_task_switching' in task_name) or ('NBack' in task_name and 'spatialTS' in task_name):
-            paired_conditions = [c for c in df['task_switch'].unique() if pd.notna(c) and c != 'na']
-            return compute_n_back_metrics(df, None, paired_task_col='task_switch', paired_conditions=paired_conditions, spatialts=True)
+            spatial_col = 'task_switch_condition' if 'task_switch_condition' in df.columns else 'task_switch'
+            paired_conditions = [c for c in df[spatial_col].unique() if pd.notna(c) and c != 'na']
+            return compute_n_back_metrics(df, None, paired_task_col=spatial_col, paired_conditions=paired_conditions, spatialts=True)
         elif ('stop_signal' in task_name and 'flanker' in task_name) or ('stopSignal' in task_name and 'flanker' in task_name):
             paired_conditions = [c for c in df['flanker_condition'].unique() if pd.notna(c)]
             return compute_stop_signal_metrics(df, dual_task=True, paired_task_col='flanker_condition', paired_conditions=paired_conditions, stim_col='center_letter')
@@ -1072,7 +1080,9 @@ def get_task_metrics(df, task_name):
             return compute_cued_task_switching_metrics(df, CUED_TASK_SWITCHING_CONDITIONS, 'single')
         elif 'spatial_task_switching' in task_name or 'spatialTS' in task_name:
             conditions = {'spatial_task_switching': SPATIAL_TASK_SWITCHING_CONDITIONS}
-            condition_columns = {'spatial_task_switching': 'task_switch'}
+            # Prefer in-scanner column when present
+            spatial_col = 'task_switch_condition' if 'task_switch_condition' in df.columns else 'task_switch'
+            condition_columns = {'spatial_task_switching': spatial_col}
             return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name), spatialts=True)
         # Special handling for stop signal task
         elif 'stop_signal' in task_name:

@@ -27,10 +27,10 @@ def load_config() -> PathConfig:
     if mode == "fmri":
         # In-scanner (fMRI) behavior: cleaned CSVs per session under raw_cleaned/s*/ses-*/
         input_folder = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/raw_cleaned")
-        qc_output = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/qc_by_task/")
-        flags_output = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/flags/")
-        exclusions_output = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/exclusions/")
-        violations_output = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/violations/")
+        qc_output = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/fmri_behavior_qc_by_task/")
+        flags_output = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/fmri_behavior_flags/")
+        exclusions_output = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/fmri_behavior_exclusions/")
+        violations_output = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/fmri_behavior_violations/")
         return PathConfig(
             input_folder=input_folder,
             qc_output_folder=qc_output,
