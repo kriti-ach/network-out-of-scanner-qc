@@ -550,7 +550,7 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict):
     Returns:
         None: Updates metrics_dict in place
     """
-    correct_col = 'correct' if 'correct' in df.columns else 'correct_trial'
+    correct_col = 'correct_trial' if 'correct_trial' in df.columns else 'correct'
     mask_rt = mask_acc & (df[correct_col] == 1)
     mask_omission = mask_acc & (df['key_press'] == -1)
     mask_commission = mask_acc & (df['key_press'] != -1) & (df[correct_col] == 0)
