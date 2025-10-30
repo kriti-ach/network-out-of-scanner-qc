@@ -92,6 +92,7 @@ if cfg.is_fmri:
         subject_id = Path(subj_dir).name
         if not re.match(r"s\d{2,}", subject_id):
             continue
+        print(f"Processing Subject: {subject_id}")
         for ses_dir in glob.glob(str(Path(subj_dir) / 'ses-*')):
             for file in glob.glob(str(Path(ses_dir) / '*.csv')):
                 if '/practice/' in file.lower():

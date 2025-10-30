@@ -53,7 +53,7 @@ def compare_to_threshold(metric_name, metric_value, threshold):
     """Check if a metric value violates the exclusion criteria."""
     return metric_value < threshold if 'low' in metric_name or 'acc' in metric_name else metric_value > threshold
 
-def append_exclusion_row(exclusion_df, subject_id, metric_name, metric_value, threshold):
+def append_exclusion_row(exclusion_df, subject_id, metric_name, metric_value, threshold, session=None):
     """Append a new exclusion row to the exclusion dataframe, avoiding duplicates."""
     # Check if this subject+metric combination already exists
     if len(exclusion_df) > 0:
@@ -65,15 +65,18 @@ def append_exclusion_row(exclusion_df, subject_id, metric_name, metric_value, th
             return exclusion_df  # Skip duplicate
     
     # Append new row
-    exclusion_df = pd.concat([
-        exclusion_df,
-        pd.DataFrame({
-            'subject_id': [subject_id],
-            'metric': [metric_name],
-            'metric_value': [metric_value],
-            'threshold': [threshold]
-        })
-    ], ignore_index=True)
+    row_dict = {
+        'subject_id': [subject_id],
+        'metric': [metric_name],
+        'metric_value': [metric_value],
+        'threshold': [threshold]
+    }
+    if session is not None:
+        row_dict['session'] = [session]
+        # Ensure column exists
+        if 'session' not in exclusion_df.columns:
+            exclusion_df['session'] = pd.Series(dtype=str)
+    exclusion_df = pd.concat([exclusion_df, pd.DataFrame(row_dict)], ignore_index=True)
     return exclusion_df
 
 def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
@@ -82,6 +85,9 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
         if index >= len(task_csv) - SUMMARY_ROWS:
             continue
         subject_id = row['subject_id']
+        session = row['session'] if 'session' in row.index else None
+        session = row['session'] if 'session' in row.index else None
+        session = row['session'] if 'session' in row.index else None
 
         # Get actual column names for each metric type
         stop_success_cols = [col for col in task_csv.columns if 'stop_success' in col]
@@ -94,18 +100,18 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
             value = row[col_name]
             if 'nogo' in col_name:
                 if compare_to_threshold('stop_success_low', value, NOGO_STOP_SUCCESS_MIN):
-                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, NOGO_STOP_SUCCESS_MIN)
+                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, NOGO_STOP_SUCCESS_MIN, session)
             else:
                 if compare_to_threshold('stop_success_low', value, STOP_SUCCESS_ACC_LOW_THRESHOLD):
-                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, STOP_SUCCESS_ACC_LOW_THRESHOLD)
+                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, STOP_SUCCESS_ACC_LOW_THRESHOLD, session)
                 if compare_to_threshold('stop_success_high', value, STOP_SUCCESS_ACC_HIGH_THRESHOLD):
-                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, STOP_SUCCESS_ACC_HIGH_THRESHOLD)
+                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, STOP_SUCCESS_ACC_HIGH_THRESHOLD, session)
 
             # Check go_rt columns
             for col_name in go_rt_cols:
                 value = row[col_name]
                 if compare_to_threshold('go_rt', value, GO_RT_THRESHOLD if not is_dual_task(task_name) else GO_RT_THRESHOLD_DUAL_TASK):
-                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, GO_RT_THRESHOLD)
+                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, GO_RT_THRESHOLD, session)
 
             # Check if stop fail rt > go rt if the prefix is the same
             for col_name in stop_fail_rt_cols:
@@ -115,20 +121,20 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
                         stop_fail_rt = row[col_name]
                         go_rt = row[col_name_go]
                         if stop_fail_rt > go_rt:
-                            exclusion_df = append_exclusion_row(exclusion_df, subject_id, metric_name, stop_fail_rt, go_rt)
+                            exclusion_df = append_exclusion_row(exclusion_df, subject_id, metric_name, stop_fail_rt, go_rt, session)
             
             # Check go_acc columns unless this is an N-back dual (N-back accuracy rules should own accuracy)
             if 'n_back' not in task_name:
                 for col_name in go_acc_cols:
                     value = row[col_name]
                     if compare_to_threshold('go_acc', value, ACC_THRESHOLD):
-                        exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, ACC_THRESHOLD)
+                        exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, ACC_THRESHOLD, session)
 
             # Check go_omission_rate columns
             for col_name in go_omission_rate_cols:
                 value = row[col_name]
                 if compare_to_threshold('go_omission_rate', value, OMISSION_RATE_THRESHOLD):
-                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, OMISSION_RATE_THRESHOLD)
+                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, OMISSION_RATE_THRESHOLD, session)
 
     #sort by subject_id
     exclusion_df = sort_subject_ids(exclusion_df)
@@ -156,25 +162,27 @@ def check_go_nogo_exclusion_criteria(task_name, task_csv, exclusion_df):
                 
                 # Only proceed if prefixes match
                 if go_prefix == nogo_prefix:
+                    session = row['session'] if 'session' in row.index else None
                     go_acc_value = row[col_name_go]
                     nogo_acc_value = row[col_name_nogo]
                     # Check go accuracy threshold only if this is a go_nogo single task 
                     if task_name == "go_nogo_single_task_network":
                         if compare_to_threshold('go_acc', go_acc_value, GO_ACC_THRESHOLD_GO_NOGO):
-                            exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name_go, go_acc_value, GO_ACC_THRESHOLD_GO_NOGO)
-                    if compare_to_threshold('nogo_acc', nogo_acc_value, NOGO_ACC_THRESHOLD_GO_NOGO):
-                        exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name_nogo, nogo_acc_value, NOGO_ACC_THRESHOLD_GO_NOGO)
+                            exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name_go, go_acc_value, GO_ACC_THRESHOLD_GO_NOGO, session)
+                        if compare_to_threshold('nogo_acc', nogo_acc_value, NOGO_ACC_THRESHOLD_GO_NOGO):
+                            exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name_nogo, nogo_acc_value, NOGO_ACC_THRESHOLD_GO_NOGO, session)
 
         for col_name in go_omission_rate_cols:
+            session = row['session'] if 'session' in row.index else None
             value = row[col_name]
             if compare_to_threshold('go_omission_rate', value, GO_OMISSION_RATE_THRESHOLD):
-                exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, GO_OMISSION_RATE_THRESHOLD)
+                exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, GO_OMISSION_RATE_THRESHOLD, session)
     #sort by subject_id
     if len(exclusion_df) != 0:
         exclusion_df = sort_subject_ids(exclusion_df)
     return exclusion_df
 
-def check_n_back_exclusion_criteria(task_name, task_csv, exclusion_df):
+def check_n_back_exclusion_criteria(task_name, task_csv, exclusion_df, session=None):
     for index, row in task_csv.iterrows():
         #ignore the last 4 rows (summary rows)
         if index >= len(task_csv) - SUMMARY_ROWS:
@@ -182,8 +190,8 @@ def check_n_back_exclusion_criteria(task_name, task_csv, exclusion_df):
         subject_id = row['subject_id']
         for load in [1, 2, 3]:
             cols = nback_get_columns(task_csv, load)
-            exclusion_df = nback_flag_independent_accuracy(exclusion_df, subject_id, row, load, cols)
-            exclusion_df = nback_flag_omission_rates(exclusion_df, subject_id, row, load, cols)
+            exclusion_df = nback_flag_independent_accuracy(exclusion_df, subject_id, row, load, cols, session)
+            exclusion_df = nback_flag_omission_rates(exclusion_df, subject_id, row, load, cols, session)
 
     #sort by subject_id
     if len(exclusion_df) != 0:
@@ -232,29 +240,29 @@ def nback_get_columns(task_csv, load):
         'omission_rate': omiss,
     }
 
-def nback_flag_independent_accuracy(exclusion_df, subject_id, row, load, cols):
+def nback_flag_independent_accuracy(exclusion_df, subject_id, row, load, cols, session=None):
     # Flag mismatch accuracy below threshold (use full column name)
     for mismatch_col in cols['mismatch_acc']:
         val = row[mismatch_col]
         if compare_to_threshold(mismatch_col, val, MISMATCH_THRESHOLD):
             exclusion_df = append_exclusion_row(
-                exclusion_df, subject_id, mismatch_col, val, MISMATCH_THRESHOLD
+                exclusion_df, subject_id, mismatch_col, val, MISMATCH_THRESHOLD, session
             )
     # Flag match accuracy below threshold (use full column name)
     for match_col in cols['match_acc']:
         val = row[match_col]
         if compare_to_threshold(match_col, val, MATCH_THRESHOLD):
             exclusion_df = append_exclusion_row(
-                exclusion_df, subject_id, match_col, val, MATCH_THRESHOLD
+                exclusion_df, subject_id, match_col, val, MATCH_THRESHOLD, session
             )
     return exclusion_df
 
-def nback_flag_omission_rates(exclusion_df, subject_id, row, load, cols):
+def nback_flag_omission_rates(exclusion_df, subject_id, row, load, cols, session=None):
     for omiss_col in cols['omission_rate']:
         val = row[omiss_col]
         if compare_to_threshold(omiss_col, val, OMISSION_RATE_THRESHOLD):
             exclusion_df = append_exclusion_row(
-                exclusion_df, subject_id, omiss_col, val, OMISSION_RATE_THRESHOLD
+                exclusion_df, subject_id, omiss_col, val, OMISSION_RATE_THRESHOLD, session
             )
     return exclusion_df
 
@@ -263,6 +271,7 @@ def check_other_exclusion_criteria(task_name, task_csv, exclusion_df):
         if index >= len(task_csv) - SUMMARY_ROWS:
             continue
         subject_id = row['subject_id']
+        session = row['session'] if 'session' in row.index else None
         
         # Get all accuracy and omission rate columns
         acc_cols = [col for col in task_csv.columns if 'acc' in col and 'nogo' not in col and 'stop_fail' not in col]
@@ -274,7 +283,7 @@ def check_other_exclusion_criteria(task_name, task_csv, exclusion_df):
             for col_name in acc_cols:
                 value = row[col_name]
                 if compare_to_threshold(col_name, value, ACC_THRESHOLD):
-                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, ACC_THRESHOLD)
+                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, ACC_THRESHOLD, session)
         
         # Check omission rate columns (but exclude N-back specific omission rates)
         for col_name in omission_rate_cols:
@@ -282,7 +291,7 @@ def check_other_exclusion_criteria(task_name, task_csv, exclusion_df):
             if 'back' not in col_name.lower():
                 value = row[col_name]
                 if compare_to_threshold(col_name, value, OMISSION_RATE_THRESHOLD):
-                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, OMISSION_RATE_THRESHOLD)
+                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, OMISSION_RATE_THRESHOLD, session)
     
     #sort by subject_id
     if len(exclusion_df) != 0:

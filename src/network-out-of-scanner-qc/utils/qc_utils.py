@@ -537,7 +537,7 @@ def add_category_accuracies(df, column_name, label_to_metric_key, metrics, stops
         else:
             metrics[metric_key] = calculate_acc(df, mask)
 
-def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict):
+def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, prefer_correct: bool = False):
     """
     Calculate all basic metrics (acc, RT, omission rate, commission rate) for a condition.
     
@@ -550,7 +550,23 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict):
     Returns:
         None: Updates metrics_dict in place
     """
-    correct_col = 'correct_trial' if 'correct_trial' in df.columns else 'correct'
+    # Use 'correct' if instructed and present; else default to 'correct_trial' then 'correct'
+    if prefer_correct and 'correct' in df.columns:
+        correct_col = 'correct'
+    else:
+        correct_col = 'correct_trial' if 'correct_trial' in df.columns else ('correct' if 'correct' in df.columns else None)
+    if correct_col is None:
+        # Fallback: equality of key_press and correct_response if available
+        eq_series = (df['key_press'] == df['correct_response']) if {'key_press','correct_response'}.issubset(df.columns) else pd.Series([np.nan]*len(df))
+        mask_rt = mask_acc & (eq_series == 1)
+        mask_omission = mask_acc & (df['key_press'] == -1)
+        mask_commission = mask_acc & (df['key_press'] != -1) & (eq_series == 0)
+        total_num_trials = len(df[mask_acc])
+        metrics_dict[f'{cond_name}_acc'] = eq_series[mask_acc].mean()
+        metrics_dict[f'{cond_name}_rt'] = df[mask_rt]['rt'].mean() if len(df[mask_rt]) > 0 else np.nan
+        metrics_dict[f'{cond_name}_omission_rate'] = calculate_omission_rate(df, mask_omission, total_num_trials)
+        metrics_dict[f'{cond_name}_commission_rate'] = calculate_commission_rate(df, mask_commission, total_num_trials)
+        return
     mask_rt = mask_acc & (df[correct_col] == 1)
     mask_omission = mask_acc & (df['key_press'] == -1)
     mask_commission = mask_acc & (df['key_press'] != -1) & (df[correct_col] == 0)
@@ -561,7 +577,7 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict):
     metrics_dict[f'{cond_name}_omission_rate'] = calculate_omission_rate(df, mask_omission, total_num_trials)
     metrics_dict[f'{cond_name}_commission_rate'] = calculate_commission_rate(df, mask_commission, total_num_trials)
 
-def calculate_go_nogo_metrics(df, mask_acc, cond_name, metrics_dict):
+def calculate_go_nogo_metrics(df, mask_acc, cond_name, metrics_dict, response_equality: bool = False):
     """
     Calculate go_nogo metrics with special handling for nogo condition.
     For nogo: only calculate RT for commission errors, no omission/commission rates.
@@ -586,14 +602,20 @@ def calculate_go_nogo_metrics(df, mask_acc, cond_name, metrics_dict):
         metrics_dict[f'{cond_name}_rt'] = calculate_rt(df, mask_rt)
         # Don't calculate omission_rate or commission_rate for nogo
     else:
-        # For go: calculate all metrics normally
-        correct_col = 'correct_trial' if 'correct_trial' in df.columns else 'correct'
-        mask_rt = mask_acc & (df[correct_col] == 1)
-        mask_omission = mask_acc & (df['key_press'] == -1)
-        mask_commission = mask_acc & (df['key_press'] != -1) & (df[correct_col] == 0)
+        # For go: calculate all metrics
+        if response_equality and {'correct_response','key_press'}.issubset(df.columns):
+            eq_series = (df['key_press'] == df['correct_response']).astype(int)
+            mask_rt = mask_acc & (eq_series == 1)
+            mask_omission = mask_acc & (df['key_press'] == -1)
+            mask_commission = mask_acc & (df['key_press'] != -1) & (eq_series == 0)
+            metrics_dict[f'{cond_name}_acc'] = eq_series[mask_acc].mean() if len(df[mask_acc]) > 0 else np.nan
+        else:
+            correct_col = 'correct_trial' if 'correct_trial' in df.columns else 'correct'
+            mask_rt = mask_acc & (df[correct_col] == 1)
+            mask_omission = mask_acc & (df['key_press'] == -1)
+            mask_commission = mask_acc & (df['key_press'] != -1) & (df[correct_col] == 0)
+            metrics_dict[f'{cond_name}_acc'] = calculate_acc(df, mask_acc)
         total_num_trials = len(df[mask_acc])
-        
-        metrics_dict[f'{cond_name}_acc'] = calculate_acc(df, mask_acc)
         metrics_dict[f'{cond_name}_rt'] = calculate_rt(df, mask_rt)
         metrics_dict[f'{cond_name}_omission_rate'] = calculate_omission_rate(df, mask_omission, total_num_trials)
         metrics_dict[f'{cond_name}_commission_rate'] = calculate_commission_rate(df, mask_commission, total_num_trials)
@@ -625,7 +647,8 @@ def compute_cued_task_switching_metrics(
                 cue = cond[cond.index('_c')+2:]
                 mask_acc = (df['task_condition'].apply(lambda x: str(x).lower()) == task) & \
                            (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
-                calculate_basic_metrics(df, mask_acc, cond, metrics)
+                # flanker + cuedTS should use 'correct' (not 'correct_trial')
+                calculate_basic_metrics(df, mask_acc, cond, metrics, prefer_correct=True)
             elif condition_type == 'flanker':
                 # cond format: {flanker}_t{task}_c{cue}
                 flanker, t_part = cond.split('_t')
@@ -1189,7 +1212,9 @@ def calculate_metrics(df, conditions, condition_columns, is_dual_task, spatialts
             mask_acc = (df[condition_columns[task]] == cond)
             # Check if this is a go_nogo task
             if 'go_nogo' in task:
-                calculate_go_nogo_metrics(df, mask_acc, cond, metrics)
+                # For single go_nogo: use response equality only in fMRI mode
+                is_fmri = os.environ.get('QC_DATA_MODE', 'out_of_scanner').lower() == 'fmri'
+                calculate_go_nogo_metrics(df, mask_acc, cond, metrics, response_equality=is_fmri)
             else:
                 calculate_basic_metrics(df, mask_acc, cond, metrics)
         if spatialts:
