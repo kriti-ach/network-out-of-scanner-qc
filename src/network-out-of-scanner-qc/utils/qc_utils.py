@@ -642,7 +642,6 @@ def compute_cued_task_switching_metrics(
     - flanker_col: column name for flanker (if dual)
     - go_nogo_col: column name for go_nogo (if dual)
     """
-    print(f"DEBUG compute_cued_task_switching_metrics: condition_type={condition_type}, is_fmri={os.environ.get('QC_DATA_MODE', 'out_of_scanner').lower() == 'fmri'}")
     metrics = {}
     for cond in condition_list:
         try:
@@ -675,7 +674,7 @@ def compute_cued_task_switching_metrics(
                         print(f"DEBUG: Next row {sample_idx+1}: correct={df.loc[sample_idx+1, 'correct'] if 'correct' in df.columns else 'N/A'}, correct_trial={df.loc[sample_idx+1, 'correct_trial'] if 'correct_trial' in df.columns else 'N/A'}")
                     else:
                         print(f"DEBUG: No next row (sample_idx={sample_idx}, df_len={len(df)})")
-                calculate_basic_metrics(df, mask_acc, cond, metrics, shift_correct_forward=is_fmri)
+                calculate_basic_metrics(df, mask_acc, cond, metrics, shift_correct_forward=True)
             elif condition_type == 'go_nogo':
                 # cond format: {go_nogo}_t{task}_c{cue}
                 go_nogo, t_part = cond.split('_t')
@@ -911,7 +910,6 @@ def get_task_metrics(df, task_name):
     Returns:
         dict: Dictionary containing task-specific metrics
     """
-    print(f"DEBUG get_task_metrics START: task_name={task_name}, is_fmri={os.environ.get('QC_DATA_MODE', 'out_of_scanner').lower() == 'fmri'}")
     # First filter to test trials
     df = filter_to_test_trials(df, task_name)
     
