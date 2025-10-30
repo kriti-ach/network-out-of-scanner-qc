@@ -537,7 +537,7 @@ def add_category_accuracies(df, column_name, label_to_metric_key, metrics, stops
         else:
             metrics[metric_key] = calculate_acc(df, mask)
 
-def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, prefer_correct: bool = False):
+def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, shift_correct_forward=False):
     """
     Calculate all basic metrics (acc, RT, omission rate, commission rate) for a condition.
     
@@ -546,33 +546,31 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, prefer_correc
         mask_acc (pd.Series): Boolean mask for acc calculation
         cond_name (str): Condition name for metric keys
         metrics_dict (dict): Dictionary to store metrics
+        shift_correct_forward (bool): If True, shift correct column forward by 1 row (for flanker+cuedTS in-scanner)
         
     Returns:
         None: Updates metrics_dict in place
     """
     # Use 'correct' if instructed and present; else default to 'correct_trial' then 'correct'
-    if prefer_correct and 'correct' in df.columns:
-        correct_col = 'correct'
+    correct_col = 'correct_trial' if 'correct_trial' in df.columns else 'correct'
+    
+    # For flanker+cuedTS in-scanner: correct is on the next row after task_condition/cue_condition
+    if shift_correct_forward and correct_col in df.columns:
+        # Shift correct column forward by 1 (row i gets value from row i+1)
+        correct_series = df[correct_col].shift(-1).fillna(0).astype(int)
     else:
-        correct_col = 'correct_trial' if 'correct_trial' in df.columns else ('correct' if 'correct' in df.columns else None)
-    if correct_col is None:
-        # Fallback: equality of key_press and correct_response if available
-        eq_series = (df['key_press'] == df['correct_response']) if {'key_press','correct_response'}.issubset(df.columns) else pd.Series([np.nan]*len(df))
-        mask_rt = mask_acc & (eq_series == 1)
-        mask_omission = mask_acc & (df['key_press'] == -1)
-        mask_commission = mask_acc & (df['key_press'] != -1) & (eq_series == 0)
-        total_num_trials = len(df[mask_acc])
-        metrics_dict[f'{cond_name}_acc'] = eq_series[mask_acc].mean()
-        metrics_dict[f'{cond_name}_rt'] = df[mask_rt]['rt'].mean() if len(df[mask_rt]) > 0 else np.nan
-        metrics_dict[f'{cond_name}_omission_rate'] = calculate_omission_rate(df, mask_omission, total_num_trials)
-        metrics_dict[f'{cond_name}_commission_rate'] = calculate_commission_rate(df, mask_commission, total_num_trials)
-        return
-    mask_rt = mask_acc & (df[correct_col] == 1)
-    mask_omission = mask_acc & (df['key_press'] == -1)
-    mask_commission = mask_acc & (df['key_press'] != -1) & (df[correct_col] == 0)
+        correct_series = df[correct_col] if correct_col in df.columns else pd.Series([0]*len(df))
+
+    mask_rt = mask_acc & (correct_series == 1)
+    mask_omission = mask_acc & (df['key_press'] == -1) if 'key_press' in df.columns else pd.Series([False]*len(df))
+    mask_commission = mask_acc & (df['key_press'] != -1) & (correct_series == 0) if 'key_press' in df.columns else pd.Series([False]*len(df))
     total_num_trials = len(df[mask_acc])
     
-    metrics_dict[f'{cond_name}_acc'] = calculate_acc(df, mask_acc)
+    # For accuracy, use the shifted correct series if applicable
+    if shift_correct_forward and correct_col in df.columns:
+        metrics_dict[f'{cond_name}_acc'] = correct_series[mask_acc].mean() if len(df[mask_acc]) > 0 else np.nan
+    else:
+        metrics_dict[f'{cond_name}_acc'] = calculate_acc(df, mask_acc)
     metrics_dict[f'{cond_name}_rt'] = calculate_rt(df, mask_rt)
     metrics_dict[f'{cond_name}_omission_rate'] = calculate_omission_rate(df, mask_omission, total_num_trials)
     metrics_dict[f'{cond_name}_commission_rate'] = calculate_commission_rate(df, mask_commission, total_num_trials)
@@ -647,8 +645,7 @@ def compute_cued_task_switching_metrics(
                 cue = cond[cond.index('_c')+2:]
                 mask_acc = (df['task_condition'].apply(lambda x: str(x).lower()) == task) & \
                            (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
-                # flanker + cuedTS should use 'correct' (not 'correct_trial')
-                calculate_basic_metrics(df, mask_acc, cond, metrics, prefer_correct=True)
+                calculate_basic_metrics(df, mask_acc, cond, metrics)
             elif condition_type == 'flanker':
                 # cond format: {flanker}_t{task}_c{cue}
                 flanker, t_part = cond.split('_t')
@@ -658,7 +655,9 @@ def compute_cued_task_switching_metrics(
                     (df['task_condition'].apply(lambda x: str(x).lower()) == task) &
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
-                calculate_basic_metrics(df, mask_acc, cond, metrics)
+                # For in-scanner flanker+cuedTS, correct is on the next row
+                is_fmri = os.environ.get('QC_DATA_MODE', 'out_of_scanner').lower() == 'fmri'
+                calculate_basic_metrics(df, mask_acc, cond, metrics, shift_correct_forward=is_fmri)
             elif condition_type == 'go_nogo':
                 # cond format: {go_nogo}_t{task}_c{cue}
                 go_nogo, t_part = cond.split('_t')

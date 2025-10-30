@@ -86,8 +86,6 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
             continue
         subject_id = row['subject_id']
         session = row['session'] if 'session' in row.index else None
-        session = row['session'] if 'session' in row.index else None
-        session = row['session'] if 'session' in row.index else None
 
         # Get actual column names for each metric type
         stop_success_cols = [col for col in task_csv.columns if 'stop_success' in col]
@@ -182,12 +180,13 @@ def check_go_nogo_exclusion_criteria(task_name, task_csv, exclusion_df):
         exclusion_df = sort_subject_ids(exclusion_df)
     return exclusion_df
 
-def check_n_back_exclusion_criteria(task_name, task_csv, exclusion_df, session=None):
+def check_n_back_exclusion_criteria(task_name, task_csv, exclusion_df):
     for index, row in task_csv.iterrows():
         #ignore the last 4 rows (summary rows)
         if index >= len(task_csv) - SUMMARY_ROWS:
             continue
         subject_id = row['subject_id']
+        session = row['session'] if 'session' in row.index else None
         for load in [1, 2, 3]:
             cols = nback_get_columns(task_csv, load)
             exclusion_df = nback_flag_independent_accuracy(exclusion_df, subject_id, row, load, cols, session)
