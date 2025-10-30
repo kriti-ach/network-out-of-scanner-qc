@@ -14,6 +14,7 @@ from utils.qc_utils import (
     correct_columns,
     normalize_flanker_conditions,
 )
+from utils.violations_utils import compute_violations, aggregate_violations, plot_violations, create_violations_matrices
 from utils.globals import SINGLE_TASKS_OUT_OF_SCANNER, DUAL_TASKS_OUT_OF_SCANNER
 from utils.exclusion_utils import check_exclusion_criteria, remove_some_flags_for_exclusion
 from utils.config import load_config
@@ -29,15 +30,6 @@ output_path = cfg.qc_output_folder
 flags_output_path = cfg.flags_output_folder
 exclusions_output_path = cfg.exclusions_output_folder
 violations_output_path = cfg.violations_output_folder
-
-# Import violations utilities only when needed (out-of-scanner mode)
-if not cfg.is_fmri:
-    from utils.violations_utils import (
-        compute_violations,
-        aggregate_violations,
-        plot_violations,
-        create_violations_matrices,
-    )
 
 def infer_task_name_from_filename(fname: str) -> str | None:
     name = fname.lower()
