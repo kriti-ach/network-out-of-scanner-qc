@@ -553,7 +553,7 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict):
     # Use 'correct' if instructed and present; else default to 'correct_trial' then 'correct'
     correct_col = 'correct_trial' if 'correct_trial' in df.columns else 'correct'
     
-    # Adjust the mask based on whether the correct_col is 'correct'
+    # Adjust the mask based on whether the correct_col is 'correct', which it is in flanker + cued in-scanner
     if correct_col == 'correct':
         # Shift the mask by 1 to account for the correct column being one row below
         correct_mask = df[correct_col].shift(-1) == 1  # Shift the column up by 1
@@ -1006,11 +1006,10 @@ def get_task_metrics(df, task_name):
             return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name), spatialts=True, shapematching=True)
         
         elif ('cued_task_switching' in task_name and 'spatial_task_switching' in task_name) or ('CuedTS' in task_name and 'spatialTS' in task_name):
+            print(f"DEBUG get_task_metrics: Found cued+spatial task: {task_name}")
             return compute_cued_spatial_task_switching_metrics(df, SPATIAL_WITH_CUED_CONDITIONS)
         elif ('flanker' in task_name and 'cued_task_switching' in task_name) or ('flanker' in task_name and 'CuedTS' in task_name):
             print(f"DEBUG get_task_metrics: Found flanker+cuedTS task: {task_name}")
-            print(f"DEBUG: DataFrame columns: {list(df.columns)}")
-            print(f"DEBUG: DataFrame shape: {df.shape}")
             return compute_cued_task_switching_metrics(df, FLANKER_WITH_CUED_CONDITIONS, 'flanker', flanker_col='flanker_condition')
         elif ('go_nogo' in task_name and 'cued_task_switching' in task_name) or ('go_nogo' in task_name and 'CuedTS' in task_name):
             return compute_cued_task_switching_metrics(df, GO_NOGO_WITH_CUED_CONDITIONS, 'go_nogo', go_nogo_col='go_nogo_condition')
