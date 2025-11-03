@@ -419,18 +419,32 @@ def preprocess_rt_tail_cutoff(df: pd.DataFrame):
     if 'trial_id' not in df.columns or 'rt' not in df.columns:
         return df, None, False
 
-    df_test = df[df['trial_id'] == 'test_trial']
+    # Normalize trial_id and coerce rt to numeric
+    trial_id_norm = df['trial_id'].astype(str).str.strip().str.lower()
+    df_test = df[trial_id_norm == 'test_trial']
     if df_test.empty:
         return df, None, False
 
-    is_minus1 = (df_test['rt'] == -1)
-    # Identify first index where all following rts are -1 (suffix all-True)
-    suffix_all = is_minus1[::-1].cummin()[::-1]
-    if not suffix_all.any():
+    rts = pd.to_numeric(df_test['rt'], errors='coerce')
+    # Find last position where rt != -1
+    not_minus1 = (rts != -1) & rts.notna()
+    if not not_minus1.any():
+        # All -1 from the start: cutoff at 0
+        cutoff_pos = 0
+    else:
+        last_valid_pos = not_minus1[not_minus1].index[-1]
+        # Convert index label to position within df_test
+        last_valid_ixpos = df_test.index.get_loc(last_valid_pos)
+        cutoff_pos = last_valid_ixpos + 1
+
+    if cutoff_pos >= len(df_test):
+        # No trailing -1 segment
         return df, None, False
 
-    first_all_idx = suffix_all.idxmax()
-    cutoff_pos = df_test.index.get_loc(first_all_idx)
+    # Verify all remaining are -1
+    if not (rts.iloc[cutoff_pos:] == -1).all():
+        return df, None, False
+
     halfway = len(df_test) / 2.0
     cutoff_before_halfway = cutoff_pos < halfway
 
