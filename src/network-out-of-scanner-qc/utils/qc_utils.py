@@ -409,48 +409,63 @@ def filter_to_test_trials(df, task_name):
 
 def preprocess_rt_tail_cutoff(df: pd.DataFrame):
     """
-    Detect if, from some index onward within test trials, all rt values are -1.
-    If so, trim rows at/after that test-trial index. Returns a tuple:
-    (df_trimmed, cutoff_index_within_test_trials, cutoff_before_halfway)
+    Detects if the experiment was terminated early by finding the last valid
+    response ('rt' != -1) within 'test_trial' rows. If any trials exist after
+    this last valid response, they are considered a "tail" and are trimmed.
 
-    If there is no cutoff, returns (df, None, False).
-    This is generic and applies to any task format that includes 'trial_id' and 'rt'.
+    The cutoff removes ALL rows (including fixations, etc.) after the
+    last valid test trial.
+
+    Returns a tuple: (df_trimmed, cutoff_index_within_test_trials, cutoff_before_halfway)
+
+    If no tail is found to trim, returns (df, None, False).
     """
     if 'trial_id' not in df.columns or 'rt' not in df.columns:
         return df, None, False
 
-    # Normalize trial_id and coerce rt to numeric
-    trial_id_norm = df['trial_id'].astype(str).str.strip().str.lower()
-    df_test = df[trial_id_norm == 'test_trial']
+    # Ensure 'rt' column is numeric, coercing errors to NaN
+    df['rt'] = pd.to_numeric(df['rt'], errors='coerce')
+    # Fill any NaN values that might result from coercion, treating them as non-responses
+    df['rt'] = df['rt'].fillna(-1)
+
+    df_test = df[df['trial_id'] == 'test_trial']
     if df_test.empty:
         return df, None, False
 
-    rts = pd.to_numeric(df_test['rt'], errors='coerce')
-    # Find last position where rt != -1
-    not_minus1 = (rts != -1) & rts.notna()
-    if not not_minus1.any():
-        # All -1 from the start: cutoff at 0
-        cutoff_pos = 0
-    else:
-        last_valid_pos = not_minus1[not_minus1].index[-1]
-        # Convert index label to position within df_test
-        last_valid_ixpos = df_test.index.get_loc(last_valid_pos)
-        cutoff_pos = last_valid_ixpos + 1
+    # Find all test trials that have a valid response (RT is not -1)
+    valid_responses = df_test[df_test['rt'] != -1]
 
-    if cutoff_pos >= len(df_test):
-        # No trailing -1 segment
+    # If there are no valid responses at all, return the original df
+    if valid_responses.empty:
         return df, None, False
 
-    # Verify all remaining are -1
-    if not (rts.iloc[cutoff_pos:] == -1).all():
+    # Get the pandas index of the last valid response and the last test trial
+    last_valid_response_idx = valid_responses.index[-1]
+    last_test_trial_idx = df_test.index[-1]
+
+    # If the last test trial IS the last valid response, there's no tail to cut.
+    if last_valid_response_idx == last_test_trial_idx:
         return df, None, False
+
+    # --- A tail exists, so we proceed with trimming ---
+
+    # Find the integer position of the last valid response in the original df
+    cutoff_iloc = df.index.get_loc(last_valid_response_idx)
+
+    # Trim the dataframe. We keep all rows up to and including the last valid response.
+    df_trimmed = df.iloc[:cutoff_iloc + 1].copy()
+
+    # --- Calculate the returned metadata correctly ---
+
+    # Find the first test trial that was dropped
+    first_dropped_trial = df_test.loc[last_valid_response_idx:].iloc[1]
+    
+    # Get the integer position of this first dropped trial within df_test
+    cutoff_pos = df_test.index.get_loc(first_dropped_trial.name)
 
     halfway = len(df_test) / 2.0
     cutoff_before_halfway = cutoff_pos < halfway
 
-    # Keep non-test rows and test rows strictly before cutoff_pos
-    keep_idx = df.index.difference(df_test.index[cutoff_pos:])
-    df_trimmed = df.loc[keep_idx].copy()
     return df_trimmed, cutoff_pos, cutoff_before_halfway
 
 def sort_subject_ids(df):
