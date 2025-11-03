@@ -17,7 +17,7 @@ from utils.qc_utils import (
     infer_task_name_from_filename,
 )
 from utils.violations_utils import compute_violations, aggregate_violations, plot_violations, create_violations_matrices
-from utils.globals import SINGLE_TASKS_OUT_OF_SCANNER, DUAL_TASKS_OUT_OF_SCANNER, LAST_N_TEST_TRIALS
+from utils.globals import SINGLE_TASKS, DUAL_TASKS, LAST_N_TEST_TRIALS
 from utils.exclusion_utils import check_exclusion_criteria, remove_some_flags_for_exclusion
 from utils.config import load_config
 
@@ -48,7 +48,7 @@ if cfg.is_fmri:
                     discovered_tasks.add(tname)
     tasks = sorted(discovered_tasks)
 else:
-    tasks = (SINGLE_TASKS_OUT_OF_SCANNER + DUAL_TASKS_OUT_OF_SCANNER)
+    tasks = (SINGLE_TASKS + DUAL_TASKS)
 
 # Initialize QC CSVs for all tasks (include session column for fmri mode)
 initialize_qc_csvs(tasks, output_path, include_session=cfg.is_fmri)
@@ -94,8 +94,6 @@ if cfg.is_fmri:
                             continue
                         else:
                             df = df_trimmed
-                    if 'cued_task_switching' in task_name and 'flanker' in task_name:
-                        print(f"DEBUG: task_name: {task_name}")
                     metrics = get_task_metrics(df, task_name)
                     if (not cfg.is_fmri) and 'stop_signal' in task_name:
                         violations_df = pd.concat([violations_df, compute_violations(subject_id, df, task_name)])

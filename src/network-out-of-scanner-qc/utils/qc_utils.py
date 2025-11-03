@@ -5,8 +5,8 @@ import re
 import numpy as np
 
 from utils.globals import (
-    DUAL_TASKS_OUT_OF_SCANNER,
-    SINGLE_TASKS_OUT_OF_SCANNER,
+    DUAL_TASKS,
+    SINGLE_TASKS,
     FLANKER_CONDITIONS,
     DIRECTED_FORGETTING_CONDITIONS,
     SPATIAL_TASK_SWITCHING_CONDITIONS,
@@ -60,16 +60,16 @@ def infer_task_name_from_filename(fname: str) -> str | None:
         parts.append('stop_signal')
     if 'go_nogo' in name:
         parts.append('go_nogo')
-    if 'flanker' in name:
-        parts.append('flanker')
     if 'shape_matching' in name:
         parts.append('shape_matching')
     if 'directed_forgetting' in name:
         parts.append('directed_forgetting')
-    if 'spatial_task_switching' in name:
-        parts.append('spatial_task_switching')
     if 'cued_task_switching' in name or 'cuedts' in name:
         parts.append('cued_task_switching')
+    if 'spatial_task_switching' in name:
+        parts.append('spatial_task_switching')
+    if 'flanker' in name:
+        parts.append('flanker')
     if 'n_back' in name or 'nback' in name:
         parts.append('n_back')
     if not parts:
@@ -392,8 +392,7 @@ def is_dual_task(task_name):
     """
     Check if the task is a dual task.
     """
-    return any(task in task_name for task in DUAL_TASKS_OUT_OF_SCANNER)
-    # return any(task in task_name for task in DUAL_TASKS_FMRI)
+    return any(task in task_name for task in DUAL_TASKS)
 
 def extract_task_name_out_of_scanner(filename):
     """
