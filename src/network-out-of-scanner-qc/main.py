@@ -107,7 +107,14 @@ if cfg.is_fmri:
                     if 'flanker' in task_name and 'stop_signal' in task_name:
                         df = normalize_flanker_conditions(df)
                     # Generic RT tail cutoff (test_trial rts == -1)
-                    df_trimmed, cut_pos, cut_before_halfway = preprocess_rt_tail_cutoff(df)
+                    debug_key = (subject_id, Path(ses_dir).name, task_name)
+                    df_trimmed, cut_pos, cut_before_halfway = preprocess_rt_tail_cutoff(
+                        df,
+                        debug_key=debug_key,
+                        subject_id=subject_id,
+                        session=Path(ses_dir).name,
+                        task_name=task_name,
+                    )
                     if cut_pos is not None:
                         print(f"INFO: {subject_id} {Path(ses_dir).name} {task_name} cutoff at test index {cut_pos}; before_halfway={cut_before_halfway}")
                         if cut_before_halfway:
@@ -140,7 +147,13 @@ else:
                         if 'flanker' in task_name and 'stop_signal' in task_name:
                             df = normalize_flanker_conditions(df)
                         # Generic RT tail cutoff (test_trial rts == -1)
-                        df_trimmed, cut_pos, cut_before_halfway = preprocess_rt_tail_cutoff(df)
+                        df_trimmed, cut_pos, cut_before_halfway = preprocess_rt_tail_cutoff(
+                            df,
+                            debug_key=(subject_id, None, task_name),
+                            subject_id=subject_id,
+                            session=None,
+                            task_name=task_name,
+                        )
                         if cut_pos is not None:
                             print(f"INFO: {subject_id} {task_name} cutoff at test index {cut_pos}; before_halfway={cut_before_halfway}")
                             if cut_before_halfway:

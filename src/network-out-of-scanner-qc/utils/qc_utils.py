@@ -407,7 +407,7 @@ def filter_to_test_trials(df, task_name):
         return filtered if len(filtered) > 0 else df
     return df
 
-def preprocess_rt_tail_cutoff(df: pd.DataFrame):
+def preprocess_rt_tail_cutoff(df: pd.DataFrame, debug_key: tuple | None = None, subject_id: str | None = None, session: str | None = None, task_name: str | None = None):
     """
     Detects if the experiment was terminated early by finding the last valid
     response ('rt' != -1) within 'test_trial' rows. If any trials exist after
@@ -465,6 +465,21 @@ def preprocess_rt_tail_cutoff(df: pd.DataFrame):
 
     halfway = len(df_test) / 2.0
     cutoff_before_halfway = cutoff_pos < halfway
+
+    # Conditional debug for a specific subject/session/task
+    if debug_key is not None and subject_id is not None and session is not None and task_name is not None:
+        if debug_key == (subject_id, session, task_name):
+            print(f"DEBUG cutoff for {subject_id} {session} {task_name}:")
+            print(f"DEBUG test_trial count={len(df_test)}, last_valid_response_idx={last_valid_response_idx}, last_test_trial_idx={last_test_trial_idx}")
+            print(f"DEBUG cutoff_pos_within_test={cutoff_pos}, halfway={len(df_test)/2.0}, before_halfway={cutoff_before_halfway}")
+            # Show a small window around the cutoff in test trials
+            start = max(0, cutoff_pos - 3)
+            end = min(len(df_test), cutoff_pos + 3)
+            window = df_test.iloc[start:end][['rt','trial_id']]
+            print("DEBUG test_trial rt window around cutoff:\n", window.to_string())
+            # Show last few rows of trimmed df and first few rows of removed tail
+            print("DEBUG tail first rows (removed):\n", df_test.iloc[cutoff_pos:cutoff_pos+5][['rt','trial_id']].to_string())
+            print("DEBUG kept last rows (trimmed df):\n", df_trimmed.tail(5)[['rt','trial_id']].to_string())
 
     return df_trimmed, cutoff_pos, cutoff_before_halfway
 
