@@ -320,7 +320,9 @@ def get_task_columns(task_name, sample_df=None, include_session: bool = False):
             cols = extend_go_nogo_metric_columns(base_columns, GO_NOGO_WITH_CUED_CONDITIONS)
             return cols
         elif 'shape_matching' in task_name and 'cued_task_switching' in task_name or 'shape_matching' in task_name and 'CuedTS' in task_name:
-            cols = extend_metric_columns(base_columns, SHAPE_MATCHING_WITH_CUED_CONDITIONS)
+            # Filter out conditions with 'new' in them
+            filtered_conditions = [c for c in SHAPE_MATCHING_WITH_CUED_CONDITIONS if 'new' not in c]
+            cols = extend_metric_columns(base_columns, filtered_conditions)
             return cols
         elif 'directed_forgetting' in task_name and 'cued_task_switching' in task_name or 'directedForgetting' in task_name and 'CuedTS' in task_name:
             cols = extend_metric_columns(base_columns, CUED_TASK_SWITCHING_WITH_DIRECTED_FORGETTING_CONDITIONS)
@@ -1136,15 +1138,18 @@ def get_task_metrics(df, task_name):
             return calculate_metrics(df, conditions, condition_columns, is_dual_task(task_name), spatialts=True, shapematching=True)
         
         elif ('cued_task_switching' in task_name and 'spatial_task_switching' in task_name) or ('CuedTS' in task_name and 'spatialTS' in task_name):
-            print(f"DEBUG get_task_metrics: Found cued+spatial task: {task_name}")
             return compute_cued_spatial_task_switching_metrics(df, SPATIAL_WITH_CUED_CONDITIONS)
         elif ('flanker' in task_name and 'cued_task_switching' in task_name) or ('flanker' in task_name and 'CuedTS' in task_name):
-            print(f"DEBUG get_task_metrics: Found flanker+cuedTS task: {task_name}")
             return compute_cued_task_switching_metrics(df, FLANKER_WITH_CUED_CONDITIONS, 'flanker', flanker_col='flanker_condition')
         elif ('go_nogo' in task_name and 'cued_task_switching' in task_name) or ('go_nogo' in task_name and 'CuedTS' in task_name):
             return compute_cued_task_switching_metrics(df, GO_NOGO_WITH_CUED_CONDITIONS, 'go_nogo', go_nogo_col='go_nogo_condition')
         elif ('shape_matching' in task_name and 'cued_task_switching' in task_name) or ('shape_matching' in task_name and 'CuedTS' in task_name):
-            return compute_cued_task_switching_metrics(df, SHAPE_MATCHING_WITH_CUED_CONDITIONS, 'shape_matching', shape_matching_col='shape_matching_condition')
+            # Filter out conditions with 'new' in them
+            filtered_conditions = [c for c in SHAPE_MATCHING_WITH_CUED_CONDITIONS if 'new' not in c]
+            metrics = compute_cued_task_switching_metrics(df, filtered_conditions, 'shape_matching', shape_matching_col='shape_matching_condition')
+            # Also filter the returned metrics dictionary to remove any columns with 'new' (safety check)
+            metrics = {k: v for k, v in metrics.items() if 'new' not in k}
+            return metrics
         elif ('directed_forgetting' in task_name and 'cued_task_switching' in task_name) or ('directedForgetting' in task_name and 'CuedTS' in task_name):
             return compute_cued_task_switching_metrics(df, CUED_TASK_SWITCHING_WITH_DIRECTED_FORGETTING_CONDITIONS, 'directed_forgetting', directed_forgetting_col='directed_forgetting_condition')
         elif ('n_back' in task_name and 'go_nogo' in task_name) or ('NBack' in task_name and 'go_nogo' in task_name):
