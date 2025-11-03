@@ -86,7 +86,7 @@ else:
 initialize_qc_csvs(tasks, output_path, include_session=cfg.is_fmri)
 
 violations_df = pd.DataFrame()
-
+trimmed_data = []
 if cfg.is_fmri:
     # In-scanner (CSV per session) iterate and process, ignoring practice
     for subj_dir in glob.glob(str(input_root / 's*')):
@@ -115,10 +115,13 @@ if cfg.is_fmri:
                         task_name=task_name,
                     )
                     if cut_pos is not None:
-                        print(f"INFO: {subject_id} {Path(ses_dir).name} {task_name} cutoff at test index {cut_pos}; before_halfway={cut_before_halfway}")
-                        if cut_before_halfway:
-                            print(f"INFO: Skipping {subject_id} {Path(ses_dir).name} {task_name} entirely due to early cutoff")
-                            continue
+                        trimmed_data.append({
+                            'subject_id': subject_id,
+                            'session': Path(ses_dir).name,
+                            'task_name': task_name,
+                            'cut_pos': cut_pos,
+                            'cut_before_halfway': cut_before_halfway,
+                        })
                         df = df_trimmed
                     metrics = get_task_metrics(df, task_name)
                     if (not cfg.is_fmri) and 'stop_signal' in task_name:
