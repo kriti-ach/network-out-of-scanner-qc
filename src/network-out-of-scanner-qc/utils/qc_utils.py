@@ -407,7 +407,7 @@ def filter_to_test_trials(df, task_name):
         return filtered if len(filtered) > 0 else df
     return df
 
-def preprocess_rt_tail_cutoff(df: pd.DataFrame):
+def preprocess_rt_tail_cutoff(df: pd.DataFrame, debug_key: tuple | None = None, subject_id: str | None = None, session: str | None = None, task_name: str | None = None):
     """
     Detects if the experiment was terminated early by finding the last valid
     response ('rt' != -1) within 'test_trial' rows. If any trials exist after
@@ -447,21 +447,28 @@ def preprocess_rt_tail_cutoff(df: pd.DataFrame):
     cutoff_iloc = df.index.get_loc(last_valid_idx)
     df_trimmed = df.iloc[:cutoff_iloc + 1].copy()
 
-    # Compute cutoff position within test trials for halfway reporting
-    df_test = df[df['trial_id'] == 'test_trial']
-    if df_test.empty:
-        return df_trimmed, 0, False
-
-    # Identify first dropped test trial (if any)
-    dropped_test = df_test.index[df_test.index > last_valid_idx]
-    if len(dropped_test) == 0:
-        # Tail contained no test trials; consider as no cutoff for halfway purposes
-        return df_trimmed, None, False
-    first_dropped = dropped_test[0]
-    cutoff_pos = df_test.index.get_loc(first_dropped)
-
-    halfway = len(df_test) / 2.0
+    # Compute cutoff position relative to ALL rows
+    cutoff_pos = cutoff_iloc + 1  # first dropped row position in full df (0-based index within df)
+    halfway = len(df) / 2.0
     cutoff_before_halfway = cutoff_pos < halfway
+
+    # Optional targeted debugging
+    if debug_key is not None and subject_id is not None and task_name is not None:
+        if session is None:
+            key = (subject_id, None, task_name)
+        else:
+            key = (subject_id, session, task_name)
+        if key == debug_key:
+            print(f"DEBUG cutoff (ALL rows) for {subject_id} {session if session else ''} {task_name}:")
+            print(f"DEBUG last_valid_idx(label)={last_valid_idx}, cutoff_iloc={cutoff_iloc}, cutoff_pos(all)={cutoff_pos}, total_rows={len(df)}, before_halfway={cutoff_before_halfway}")
+            # Show few rows around the cutoff in full df
+            start = max(0, cutoff_iloc - 3)
+            end = min(len(df), cutoff_iloc + 4)
+            cols = ['rt','trial_id'] if 'trial_id' in df.columns else ['rt']
+            print("DEBUG df window around cutoff:\n", df.iloc[start:end][cols].to_string())
+            # Show that tail is all -1
+            tail_preview = df.iloc[cutoff_iloc+1:cutoff_iloc+6][cols] if cutoff_iloc+1 < len(df) else df.iloc[cutoff_iloc:cutoff_iloc+1][cols]
+            print("DEBUG tail head (should be all -1 rts):\n", tail_preview.to_string())
 
     return df_trimmed, cutoff_pos, cutoff_before_halfway
 
