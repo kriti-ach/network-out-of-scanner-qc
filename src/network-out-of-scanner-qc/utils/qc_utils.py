@@ -407,7 +407,7 @@ def filter_to_test_trials(df, task_name):
         return filtered if len(filtered) > 0 else df
     return df
 
-def preprocess_rt_tail_cutoff(df: pd.DataFrame, subject_id: str | None = None, session: str | None = None, task_name: str | None = None, last_n_test_trials: int = LAST_N_TEST_TRIALS):
+def preprocess_rt_tail_cutoff(df: pd.DataFrame, subject_id: str | None = None, session: str | None = None, task_name: str | None = None, last_n_test_trials: int = 10):
     """
     Detects if the experiment was terminated early by finding the last valid
     response ('rt' != -1) within 'test_trial' rows. If any trials exist after
