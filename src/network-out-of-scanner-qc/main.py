@@ -31,6 +31,7 @@ output_path = cfg.qc_output_folder
 flags_output_path = cfg.flags_output_folder
 exclusions_output_path = cfg.exclusions_output_folder
 violations_output_path = cfg.violations_output_folder
+trimmed_records = []
 
 def infer_task_name_from_filename(fname: str) -> str | None:
     name = fname.lower()
@@ -106,8 +107,7 @@ if cfg.is_fmri:
                     df = pd.read_csv(file)
                     if 'flanker' in task_name and 'stop_signal' in task_name:
                         df = normalize_flanker_conditions(df)
-                    # Generic RT tail cutoff (test_trial rts == -1)
-                    # Targeted debug
+                    # Generic RT tail cutoff
                     df_trimmed, cut_pos, cut_before_halfway = preprocess_rt_tail_cutoff(
                         df,
                         subject_id=subject_id,
@@ -115,14 +115,17 @@ if cfg.is_fmri:
                         task_name=task_name,
                     )
                     if cut_pos is not None:
-                        trimmed_data.append({
+                        trimmed_records.append({
                             'subject_id': subject_id,
                             'session': Path(ses_dir).name,
                             'task_name': task_name,
-                            'cut_pos': cut_pos,
-                            'cut_before_halfway': cut_before_halfway,
+                            'cutoff_index': int(cut_pos),
+                            'before_halfway': bool(cut_before_halfway),
                         })
-                        df = df_trimmed
+                        if cut_before_halfway:
+                            continue
+                        else:
+                            df = df_trimmed
                     metrics = get_task_metrics(df, task_name)
                     if (not cfg.is_fmri) and 'stop_signal' in task_name:
                         violations_df = pd.concat([violations_df, compute_violations(subject_id, df, task_name)])
@@ -148,7 +151,7 @@ else:
                         # Normalize flanker conditions (remove h_ and f_ prefixes)
                         if 'flanker' in task_name and 'stop_signal' in task_name:
                             df = normalize_flanker_conditions(df)
-                        # Generic RT tail cutoff (test_trial rts == -1)
+                        # Generic RT tail cutoff
                         df_trimmed, cut_pos, cut_before_halfway = preprocess_rt_tail_cutoff(
                             df,
                             subject_id=subject_id,
@@ -156,11 +159,17 @@ else:
                             task_name=task_name,
                         )
                         if cut_pos is not None:
-                            print(f"INFO: {subject_id} {task_name} cutoff at test index {cut_pos}; before_halfway={cut_before_halfway}")
+                            trimmed_records.append({
+                                'subject_id': subject_id,
+                                'session': '',
+                                'task_name': task_name,
+                                'cutoff_index': int(cut_pos),
+                                'before_halfway': bool(cut_before_halfway),
+                            })
                             if cut_before_halfway:
-                                print(f"INFO: Skipping {subject_id} {task_name} entirely due to early cutoff")
                                 continue
-                            df = df_trimmed
+                            else:
+                                df = df_trimmed
                         metrics = get_task_metrics(df, task_name)
                         if (not cfg.is_fmri) and 'stop_signal' in task_name:
                             violations_df = pd.concat([violations_df, compute_violations(subject_id, df, task_name)])
@@ -195,3 +204,9 @@ if not cfg.is_fmri:
     aggregated_violations_df.to_csv(violations_output_path / 'aggregated_violations_data.csv', index=False)
     plot_violations(aggregated_violations_df, violations_output_path)
     create_violations_matrices(aggregated_violations_df, violations_output_path)
+
+# Save list of trimmed CSVs
+if len(trimmed_records) > 0:
+    trimmed_df = pd.DataFrame(trimmed_records)
+    out_csv = Path('/oak/stanford/groups/russpold/data/network_grant/behavioral_data/trimmed_fmri_behavior_tasks.csv') if cfg.is_fmri else Path('/oak/stanford/groups/russpold/data/network_grant/behavioral_data/trimmed_out_of_scanner_tasks.csv')
+    trimmed_df.to_csv(out_csv, index=False)
