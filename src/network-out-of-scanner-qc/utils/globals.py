@@ -1,4 +1,4 @@
-SINGLE_TASKS_OUT_OF_SCANNER = [
+SINGLE_TASKS = [
     "cued_task_switching_single_task_network",
     "directed_forgetting_single_task_network",
     "flanker_single_task_network",
@@ -9,7 +9,7 @@ SINGLE_TASKS_OUT_OF_SCANNER = [
     "stop_signal_single_task_network"
 ]
 
-DUAL_TASKS_OUT_OF_SCANNER = [
+DUAL_TASKS = [
     "cued_task_switching_with_directed_forgetting",
     "directed_forgetting_with_flanker",
     "directed_forgetting_with_shape_matching",
