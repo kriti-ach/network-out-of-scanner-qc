@@ -443,6 +443,16 @@ def preprocess_rt_tail_cutoff(df: pd.DataFrame, debug_key: tuple | None = None, 
         # Mixed tail; do not trim
         return df, None, False
 
+    # Additional guard: require that the last 5 test_trial RTs are -1
+    if 'trial_id' in df.columns:
+        df_test_end = df[df['trial_id'] == 'test_trial']
+        if len(df_test_end) < 5:
+            # Not enough trailing test trials to be confident; do not trim
+            return df, None, False
+        if not (pd.to_numeric(df_test_end['rt'].tail(5), errors='coerce').fillna(-1) == -1).all():
+            # Do not trim unless the final 5 test trials are all -1
+            return df, None, False
+
     # Trim to include up to and including last_valid_idx
     cutoff_iloc = df.index.get_loc(last_valid_idx)
     df_trimmed = df.iloc[:cutoff_iloc + 1].copy()
