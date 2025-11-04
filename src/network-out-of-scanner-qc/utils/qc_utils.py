@@ -683,7 +683,7 @@ def add_category_accuracies(df, column_name, label_to_metric_key, metrics, stops
         else:
             metrics[metric_key] = calculate_acc(df, mask)
 
-def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict):
+def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, cued_with_flanker=False):
     """
     Calculate all basic metrics (acc, RT, omission rate, commission rate) for a condition.
     
@@ -697,14 +697,16 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict):
         None: Updates metrics_dict in place
     """
     # Use 'correct' if instructed and present; else default to 'correct_trial' then 'correct'
-    correct_col = 'correct_trial' if 'correct_trial' in df.columns else 'correct'
+    correct_col = 'correct' if cued_with_flanker else 'correct_trial'
     
-    # Adjust the mask based on whether the correct_col is 'correct', which it is in flanker + cued in-scanner
-    if correct_col == 'correct':
-        # Shift the mask by 1 to account for the correct column being one row below
-        correct_mask = df[correct_col].shift(-1) == 1  # Shift the column up by 1
+    # For cued+flanker: task_condition and cue_condition are on row N, but correct is on row N+1
+    # So we shift the correct column backwards by 1 to align with the condition rows
+    if cued_with_flanker:
+        correct_series = df[correct_col].shift(-1)  # Shift backwards: row N gets row N+1's value
     else:
-        correct_mask = df[correct_col] == 1
+        correct_series = df[correct_col]
+    
+    correct_mask = correct_series == 1
 
     mask_rt = mask_acc & correct_mask
     mask_omission = mask_acc & (df['key_press'] == -1) if 'key_press' in df.columns else pd.Series([False] * len(df))
@@ -713,7 +715,8 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict):
     
     total_num_trials = len(df[mask_acc])
     
-    acc_value = df[correct_col][mask_acc].mean() if len(df[mask_acc]) > 0 else np.nan
+    # Use the shifted correct_series for accuracy calculation
+    acc_value = correct_series[mask_acc].mean() if len(df[mask_acc]) > 0 else np.nan
     metrics_dict[f'{cond_name}_acc'] = acc_value
     metrics_dict[f'{cond_name}_rt'] = calculate_rt(df, mask_rt)
     metrics_dict[f'{cond_name}_omission_rate'] = calculate_omission_rate(df, mask_omission, total_num_trials)
@@ -812,7 +815,7 @@ def compute_cued_task_switching_metrics(
                     (df['cue_condition'].apply(lambda x: str(x).lower()) == cue)
                 )
                 # For in-scanner flanker+cuedTS, correct is on the next row
-                calculate_basic_metrics(df, mask_acc, cond, metrics)
+                calculate_basic_metrics(df, mask_acc, cond, metrics, cued_with_flanker=True)
             elif condition_type == 'go_nogo':
                 # cond format: {go_nogo}_t{task}_c{cue}
                 go_nogo, t_part = cond.split('_t')
