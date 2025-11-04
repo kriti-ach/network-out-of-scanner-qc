@@ -684,7 +684,8 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict):
 
     mask_rt = mask_acc & correct_mask
     mask_omission = mask_acc & (df['key_press'] == -1) if 'key_press' in df.columns else pd.Series([False] * len(df))
-    mask_commission = mask_acc & (df['key_press'] != -1) & correct_mask if 'key_press' in df.columns else pd.Series([False] * len(df))
+    # Commission: responded but incorrect (correct_mask == False means incorrect)
+    mask_commission = mask_acc & (df['key_press'] != -1) & (~correct_mask) if 'key_press' in df.columns else pd.Series([False] * len(df))
     
     total_num_trials = len(df[mask_acc])
     
