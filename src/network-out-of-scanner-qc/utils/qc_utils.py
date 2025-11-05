@@ -707,6 +707,32 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, cued_with_fla
         df_reset = df.reset_index(drop=True)
         correct_series = df_reset[correct_col].shift(-1)
         correct_series.index = original_index  # Restore original index alignment
+
+        # Debug prints to validate alignment
+        try:
+            print(f"DEBUG cued+flanker: cond={cond_name}")
+            print(f"DEBUG cued+flanker: correct_col={correct_col}, df_len={len(df)}")
+            # Show index head/tail and a few raw vs shifted values
+            head_idx = list(df.index[:3])
+            tail_idx = list(df.index[-3:])
+            print(f"DEBUG cued+flanker: index_head={head_idx} index_tail={tail_idx}")
+            print(f"DEBUG cued+flanker: raw_correct_head={df[correct_col].head(3).to_dict()} raw_correct_tail={df[correct_col].tail(3).to_dict()}")
+            print(f"DEBUG cued+flanker: shifted_correct_head={correct_series.head(3).to_dict()} shifted_correct_tail={correct_series.tail(3).to_dict()}")
+            # Map each index to the next index in row order
+            idx_list = list(df.index)
+            next_index_map = {idx_list[i]: (idx_list[i + 1] if i + 1 < len(idx_list) else None) for i in range(len(idx_list))}
+            # Sample a few mask indices
+            mask_indices = list(df[mask_acc].index[:5])
+            print(f"DEBUG cued+flanker: mask_true_count={int(mask_acc.sum())} sample_indices={mask_indices}")
+            for idx in mask_indices:
+                next_idx = next_index_map.get(idx, None)
+                raw_now = df[correct_col].get(idx, np.nan)
+                raw_next = (df[correct_col].get(next_idx, np.nan) if next_idx is not None else np.nan)
+                shifted_now = correct_series.get(idx, np.nan)
+                kp_now = df['key_press'].get(idx, np.nan) if 'key_press' in df.columns else np.nan
+                print(f"DEBUG cued+flanker: idx={idx} next_idx={next_idx} raw_now={raw_now} raw_next={raw_next} shifted_now={shifted_now} key_press_now={kp_now}")
+        except Exception as e:
+            print(f"DEBUG cued+flanker: error during debug print: {e}")
     else:
         correct_series = df[correct_col]
     
