@@ -700,13 +700,21 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, cued_with_fla
     correct_col = 'correct' if cued_with_flanker else 'correct_trial'
     
     # For cued+flanker: task_condition and cue_condition are on row N, but correct is on row N+1
-    # We need to shift by actual row position, not index position (since indices may be non-consecutive)
+    # We need to map each index to the next actual index in the sequence (not just shift by position)
     if cued_with_flanker:
-        # Reset index temporarily to ensure consecutive row positions, shift, then restore original index
-        original_index = df.index.copy()
-        df_reset = df.reset_index(drop=True)
-        correct_series = df_reset[correct_col].shift(-1)
-        correct_series.index = original_index  # Restore original index alignment
+        # Create a mapping: each index gets the correct value from the next index in sequence
+        idx_list = list(df.index)
+        correct_series = pd.Series(index=df.index, dtype=float)
+        
+        for i, current_idx in enumerate(idx_list):
+            if i + 1 < len(idx_list):
+                # Get the next index in sequence
+                next_idx = idx_list[i + 1]
+                # Map current index to next index's correct value
+                correct_series.loc[current_idx] = df[correct_col].loc[next_idx]
+            else:
+                # Last row: no next row, so NaN
+                correct_series.loc[current_idx] = np.nan
 
         # Debug prints to validate alignment
         try:
@@ -716,23 +724,25 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, cued_with_fla
             head_idx = list(df.index[:3])
             tail_idx = list(df.index[-3:])
             print(f"DEBUG cued+flanker: index_head={head_idx} index_tail={tail_idx}")
-            print(f"DEBUG cued+flanker: raw_correct_head={df[correct_col].head(3).to_dict()} raw_correct_tail={df[correct_col].tail(3).to_dict()}")
-            print(f"DEBUG cued+flanker: shifted_correct_head={correct_series.head(3).to_dict()} shifted_correct_tail={correct_series.tail(3).to_dict()}")
-            # Map each index to the next index in row order
-            idx_list = list(df.index)
-            next_index_map = {idx_list[i]: (idx_list[i + 1] if i + 1 < len(idx_list) else None) for i in range(len(idx_list))}
+            print(f"DEBUG cued+flanker: raw_correct_head={df[correct_col].loc[head_idx].to_dict()} raw_correct_tail={df[correct_col].loc[tail_idx].to_dict()}")
+            print(f"DEBUG cued+flanker: shifted_correct_head={correct_series.loc[head_idx].to_dict()} shifted_correct_tail={correct_series.loc[tail_idx].to_dict()}")
             # Sample a few mask indices
             mask_indices = list(df[mask_acc].index[:5])
             print(f"DEBUG cued+flanker: mask_true_count={int(mask_acc.sum())} sample_indices={mask_indices}")
-            for idx in mask_indices:
-                next_idx = next_index_map.get(idx, None)
-                raw_now = df[correct_col].get(idx, np.nan)
-                raw_next = (df[correct_col].get(next_idx, np.nan) if next_idx is not None else np.nan)
-                shifted_now = correct_series.get(idx, np.nan)
-                kp_now = df['key_press'].get(idx, np.nan) if 'key_press' in df.columns else np.nan
-                print(f"DEBUG cued+flanker: idx={idx} next_idx={next_idx} raw_now={raw_now} raw_next={raw_next} shifted_now={shifted_now} key_press_now={kp_now}")
+            for idx in mask_indices[:3]:  # Show first 3 matches
+                idx_pos = idx_list.index(idx) if idx in idx_list else -1
+                next_idx = idx_list[idx_pos + 1] if idx_pos >= 0 and idx_pos + 1 < len(idx_list) else None
+                raw_now = df[correct_col].loc[idx] if idx in df.index else np.nan
+                raw_next = df[correct_col].loc[next_idx] if next_idx is not None and next_idx in df.index else np.nan
+                shifted_now = correct_series.loc[idx] if idx in correct_series.index else np.nan
+                task_cond = df.loc[idx, 'task_condition'] if 'task_condition' in df.columns else 'N/A'
+                cue_cond = df.loc[idx, 'cue_condition'] if 'cue_condition' in df.columns else 'N/A'
+                print(f"DEBUG cued+flanker: idx={idx} (pos={idx_pos}) next_idx={next_idx} task={task_cond} cue={cue_cond}")
+                print(f"DEBUG cued+flanker:   raw_now={raw_now} raw_next={raw_next} shifted_now={shifted_now}")
         except Exception as e:
             print(f"DEBUG cued+flanker: error during debug print: {e}")
+            import traceback
+            traceback.print_exc()
     else:
         correct_series = df[correct_col]
     
