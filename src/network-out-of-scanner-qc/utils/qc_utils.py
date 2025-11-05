@@ -698,65 +698,17 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, cued_with_fla
     """
     # Use 'correct' if instructed and present; else default to 'correct_trial' then 'correct'
     correct_col = 'correct' if cued_with_flanker else 'correct_trial'
-    
-    # For cued+flanker: task_condition and cue_condition are on row N, but correct is on row N+1
-    # We need to map each index to the next actual index in the sequence (not just shift by position)
     if cued_with_flanker:
-        # Create a mapping: each index gets the correct value from the next index in sequence
-        idx_list = list(df.index)
-        correct_series = pd.Series(index=df.index, dtype=float)
-        
-        for i, current_idx in enumerate(idx_list):
-            if i + 1 < len(idx_list):
-                # Get the next index in sequence
-                next_idx = idx_list[i + 1]
-                # Map current index to next index's correct value
-                correct_series.loc[current_idx] = df[correct_col].loc[next_idx]
-            else:
-                # Last row: no next row, so NaN
-                correct_series.loc[current_idx] = np.nan
-
-        # Debug prints to validate alignment
-        try:
-            print(f"DEBUG cued+flanker: cond={cond_name}")
-            print(f"DEBUG cued+flanker: correct_col={correct_col}, df_len={len(df)}")
-            # Show index head/tail and a few raw vs shifted values
-            head_idx = list(df.index[:3])
-            tail_idx = list(df.index[-3:])
-            print(f"DEBUG cued+flanker: index_head={head_idx} index_tail={tail_idx}")
-            print(f"DEBUG cued+flanker: raw_correct_head={df[correct_col].loc[head_idx].to_dict()} raw_correct_tail={df[correct_col].loc[tail_idx].to_dict()}")
-            print(f"DEBUG cued+flanker: shifted_correct_head={correct_series.loc[head_idx].to_dict()} shifted_correct_tail={correct_series.loc[tail_idx].to_dict()}")
-            # Sample a few mask indices
-            mask_indices = list(df[mask_acc].index[:5])
-            print(f"DEBUG cued+flanker: mask_true_count={int(mask_acc.sum())} sample_indices={mask_indices}")
-            for idx in mask_indices[:3]:  # Show first 3 matches
-                idx_pos = idx_list.index(idx) if idx in idx_list else -1
-                next_idx = idx_list[idx_pos + 1] if idx_pos >= 0 and idx_pos + 1 < len(idx_list) else None
-                raw_now = df[correct_col].loc[idx] if idx in df.index else np.nan
-                raw_next = df[correct_col].loc[next_idx] if next_idx is not None and next_idx in df.index else np.nan
-                shifted_now = correct_series.loc[idx] if idx in correct_series.index else np.nan
-                task_cond = df.loc[idx, 'task_condition'] if 'task_condition' in df.columns else 'N/A'
-                cue_cond = df.loc[idx, 'cue_condition'] if 'cue_condition' in df.columns else 'N/A'
-                print(f"DEBUG cued+flanker: idx={idx} (pos={idx_pos}) next_idx={next_idx} task={task_cond} cue={cue_cond}")
-                print(f"DEBUG cued+flanker:   raw_now={raw_now} raw_next={raw_next} shifted_now={shifted_now}")
-        except Exception as e:
-            print(f"DEBUG cued+flanker: error during debug print: {e}")
-            import traceback
-            traceback.print_exc()
+        mask_rt = mask_acc & (df[correct_col].iloc[mask_acc.index + 1] == 1)
+        print(f'df[correct_col].iloc[mask_acc.index]: {df[correct_col].iloc[mask_acc.index]}')
+        print(f'df[correct_col].iloc[mask_acc.index + 1]: {df[correct_col].iloc[mask_acc.index + 1]}')
     else:
-        correct_series = df[correct_col]
-    
-    correct_mask = correct_series == 1
-
-    mask_rt = mask_acc & correct_mask
+        mask_rt = mask_acc & (df[correct_col] == 1)
     mask_omission = mask_acc & (df['key_press'] == -1) if 'key_press' in df.columns else pd.Series([False] * len(df))
-    # Commission: responded but incorrect (correct_mask == False means incorrect)
-    mask_commission = mask_acc & (df['key_press'] != -1) & (~correct_mask) if 'key_press' in df.columns else pd.Series([False] * len(df))
-    
+    # Commission: responded but incorrect (df[correct_col] == 0 means incorrect)
+    mask_commission = mask_acc & (df['key_press'] != -1) & (df[correct_col] == 0) if 'key_press' in df.columns else pd.Series([False] * len(df))
     total_num_trials = len(df[mask_acc])
-    
-    # Use the shifted correct_series for accuracy calculation
-    acc_value = correct_series[mask_acc].mean() if len(df[mask_acc]) > 0 else np.nan
+    acc_value = df[correct_col].loc[mask_acc].mean() if len(df[mask_acc]) > 0 else np.nan
     metrics_dict[f'{cond_name}_acc'] = acc_value
     metrics_dict[f'{cond_name}_rt'] = calculate_rt(df, mask_rt)
     metrics_dict[f'{cond_name}_omission_rate'] = calculate_omission_rate(df, mask_omission, total_num_trials)
