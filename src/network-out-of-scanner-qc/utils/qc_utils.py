@@ -467,6 +467,14 @@ def filter_to_test_trials(df, task_name):
     Returns:
         pd.DataFrame: Filtered dataframe
     """
+    if task_name == 'flanker_with_cued_task_switching':
+        # For in-scanner flanker+cued: include both test_trial and test_cue rows
+        # test_cue contains the stay/switch information needed for condition matching
+        if 'trial_id' in df.columns:
+            filtered = df[df['trial_id'].isin(['test_trial', 'test_cue'])]
+            return filtered if len(filtered) > 0 else df
+        return df
+    
     if 'trial_id' in df.columns:
         filtered = df[df['trial_id'] == 'test_trial']
         # If filter removes everything (in-scanner may not label), fall back to original
@@ -701,27 +709,73 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, cued_with_fla
     correct_col = 'correct' if cued_with_flanker else 'correct_trial'
     
     if cued_with_flanker:
-        
+        # For cued+flanker in-scanner: 
+        # - test_trial rows have the correct values (responses)
+        # - test_cue rows have condition info (task_condition, cue_condition)
+        # - mask_acc includes both test_trial and test_cue rows (for condition matching)
+        # - But accuracy should only use test_trial rows (which have correct values)
         idx_list = list(df.index)
         correct_series = pd.Series(index=df.index, dtype=float)
         
-        # For each row, find the closest forward correct value
-        for i, current_idx in enumerate(idx_list):
-            # Look forward from current index to find the closest non-null correct value
-            closest_correct = np.nan
-            for j in range(i + 1, len(idx_list)):
-                next_idx = idx_list[j]
-                correct_val = df[correct_col].loc[next_idx]
-                if pd.notna(correct_val):
-                    closest_correct = correct_val
-                    break
-            correct_series.loc[current_idx] = closest_correct
+        # Check if trial_id column exists
+        has_trial_id = 'trial_id' in df.columns
         
-        # Create masks using the shifted correct values
+        # For each row, find the correct value:
+        # - If it's a test_trial row, use its own correct value
+        # - If it's a test_cue row, find the closest test_trial row's correct value
+        for i, current_idx in enumerate(idx_list):
+            if has_trial_id:
+                current_trial_id = df.loc[current_idx, 'trial_id']
+                if current_trial_id == 'test_trial':
+                    # test_trial rows have their own correct value
+                    correct_series.loc[current_idx] = df[correct_col].loc[current_idx]
+                elif current_trial_id == 'test_cue':
+                    # test_cue rows need to find the closest test_trial row's correct value
+                    closest_correct = np.nan
+                    for j in range(i + 1, len(idx_list)):
+                        next_idx = idx_list[j]
+                        next_trial_id = df.loc[next_idx, 'trial_id']
+                        if next_trial_id == 'test_trial':
+                            correct_val = df[correct_col].loc[next_idx]
+                            if pd.notna(correct_val):
+                                closest_correct = correct_val
+                                break
+                    correct_series.loc[current_idx] = closest_correct
+                else:
+                    # Other rows: find closest forward correct value
+                    closest_correct = np.nan
+                    for j in range(i + 1, len(idx_list)):
+                        next_idx = idx_list[j]
+                        correct_val = df[correct_col].loc[next_idx]
+                        if pd.notna(correct_val):
+                            closest_correct = correct_val
+                            break
+                    correct_series.loc[current_idx] = closest_correct
+            else:
+                # No trial_id column: find closest forward correct value
+                closest_correct = np.nan
+                for j in range(i + 1, len(idx_list)):
+                    next_idx = idx_list[j]
+                    correct_val = df[correct_col].loc[next_idx]
+                    if pd.notna(correct_val):
+                        closest_correct = correct_val
+                        break
+                correct_series.loc[current_idx] = closest_correct
+        
+        # For accuracy calculation: only use test_trial rows (which have correct values)
+        # mask_acc includes both test_trial and test_cue, but we only want test_trial for accuracy
+        if has_trial_id:
+            # Only calculate accuracy for test_trial rows that match the condition
+            test_trial_mask = df['trial_id'] == 'test_trial'
+            acc_mask = mask_acc & test_trial_mask
+        else:
+            acc_mask = mask_acc
+        
+        # Create masks using the correct values
         correct_mask = correct_series == 1
         mask_rt = mask_acc & correct_mask
-        # For accuracy, use the mean of correct values (1 = correct, 0 = incorrect)
-        acc_value = correct_series[mask_acc].mean() if mask_acc.sum() > 0 else np.nan
+        # For accuracy, use the mean of correct values from test_trial rows only
+        acc_value = correct_series[acc_mask].mean() if acc_mask.sum() > 0 else np.nan
         
     else:
         correct_mask = df[correct_col] == 1
