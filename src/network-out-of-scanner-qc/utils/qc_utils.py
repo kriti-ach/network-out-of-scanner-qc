@@ -700,48 +700,28 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, cued_with_fla
     correct_col = 'correct' if cued_with_flanker else 'correct_trial'
     
     if cued_with_flanker:
-        print(f"DEBUG calculate_basic_metrics (cued+flanker): cond_name={cond_name}")
-        print(f"DEBUG calculate_basic_metrics: correct_col={correct_col}, df.shape={df.shape}")
-        print(f"DEBUG calculate_basic_metrics: mask_acc.sum()={mask_acc.sum()}, mask_acc indices (first 10)={list(df[mask_acc].index[:10])}")
-        
-        # For cued+flanker: task_condition and cue_condition are on row N, but correct is on row N+1
-        # We need to map each condition row index to the correct value from the next row position
+        # For cued+flanker: task_condition and cue_condition are on row N, but correct is on a later row
+        # Find the closest non-null correct value for each condition row
         idx_list = list(df.index)
-        print(f"DEBUG calculate_basic_metrics: Total indices={len(idx_list)}, first 5={idx_list[:5]}, last 5={idx_list[-5:]}")
-        
         correct_series = pd.Series(index=df.index, dtype=float)
         
-        # Map each index to the next row's correct value
+        # For each row, find the closest forward correct value
         for i, current_idx in enumerate(idx_list):
-            if i + 1 < len(idx_list):
-                next_idx = idx_list[i + 1]
-                correct_series.loc[current_idx] = df[correct_col].loc[next_idx]
-            else:
-                correct_series.loc[current_idx] = np.nan
-        
-        # Debug: Show some examples of the mapping
-        sample_indices = list(df[mask_acc].index[:5]) if mask_acc.sum() > 0 else []
-        print(f"DEBUG calculate_basic_metrics: Sample mask indices={sample_indices}")
-        for idx in sample_indices:
-            idx_pos = idx_list.index(idx) if idx in idx_list else -1
-            next_idx = idx_list[idx_pos + 1] if idx_pos >= 0 and idx_pos + 1 < len(idx_list) else None
-            raw_current = df[correct_col].loc[idx] if idx in df.index else np.nan
-            raw_next = df[correct_col].loc[next_idx] if next_idx is not None and next_idx in df.index else np.nan
-            shifted_value = correct_series.loc[idx] if idx in correct_series.index else np.nan
-            task_cond = df.loc[idx, 'task_condition'] if 'task_condition' in df.columns else 'N/A'
-            cue_cond = df.loc[idx, 'cue_condition'] if 'cue_condition' in df.columns else 'N/A'
-            print(f"DEBUG calculate_basic_metrics: idx={idx} (pos={idx_pos}) -> next_idx={next_idx}")
-            print(f"DEBUG calculate_basic_metrics:   task={task_cond}, cue={cue_cond}")
-            print(f"DEBUG calculate_basic_metrics:   raw_current={raw_current}, raw_next={raw_next}, shifted={shifted_value}")
+            # Look forward from current index to find the closest non-null correct value
+            closest_correct = np.nan
+            for j in range(i + 1, len(idx_list)):
+                next_idx = idx_list[j]
+                correct_val = df[correct_col].loc[next_idx]
+                if pd.notna(correct_val):
+                    closest_correct = correct_val
+                    break
+            correct_series.loc[current_idx] = closest_correct
         
         # Create masks using the shifted correct values
         correct_mask = correct_series == 1
-        print(f"DEBUG calculate_basic_metrics: correct_mask.sum()={correct_mask.sum()}")
         mask_rt = mask_acc & correct_mask
-        print(f"DEBUG calculate_basic_metrics: mask_rt.sum()={mask_rt.sum()}")
         # For accuracy, use the shifted correct values for the masked rows
         acc_value = correct_series[mask_acc].mean() if mask_acc.sum() > 0 else np.nan
-        print(f"DEBUG calculate_basic_metrics: acc_value={acc_value}")
     else:
         correct_mask = df[correct_col] == 1
         mask_rt = mask_acc & correct_mask
