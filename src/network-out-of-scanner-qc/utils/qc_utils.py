@@ -711,7 +711,9 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, cued_with_fla
             closest_correct = np.nan
             for j in range(i + 1, len(idx_list)):
                 next_idx = idx_list[j]
+                print(f"next_idx: {next_idx}")
                 correct_val = df[correct_col].loc[next_idx]
+                print(f"correct_val: {correct_val}")
                 if pd.notna(correct_val):
                     closest_correct = correct_val
                     break
