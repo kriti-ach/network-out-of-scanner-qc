@@ -721,22 +721,14 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, cued_with_fla
                     break
             correct_series.loc[current_idx] = closest_correct
         
-        print(f"DEBUG cued+flanker: correct_series has {correct_series.notna().sum()} non-null values")
-        print(f"DEBUG cued+flanker: mask_acc type={type(mask_acc)}, mask_acc.index.equals(df.index)={mask_acc.index.equals(df.index)}")
-        
         # Create masks using the shifted correct values
         correct_mask = correct_series == 1
         mask_rt = mask_acc & correct_mask
         
-        # Debug: Check what happens when we index
-        if mask_acc.sum() > 0:
-            mask_indices = mask_acc[mask_acc].index
-            print(f"DEBUG cued+flanker: mask_indices (first 5)={list(mask_indices[:5])}")
-            print(f"DEBUG cued+flanker: correct_series.loc[mask_indices[:5]]={correct_series.loc[mask_indices[:5]].tolist()}")
-            print(f"DEBUG cued+flanker: correct_series[mask_acc] length={len(correct_series[mask_acc])}")
-            print(f"DEBUG cued+flanker: correct_series[mask_acc] values={correct_series[mask_acc].tolist()}")
-        
         # For accuracy, use the mean of correct values (1 = correct, 0 = incorrect)
+        print(f'correct_series: {correct_series}')
+        print(f'mask_acc: {mask_acc}')
+        print(f'correct_series[mask_acc]: {correct_series[mask_acc]}')
         acc_value = correct_series[mask_acc].mean() if mask_acc.sum() > 0 else np.nan
         print(f"DEBUG cued+flanker: acc_value={acc_value}")
         
