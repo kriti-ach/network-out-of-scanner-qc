@@ -54,21 +54,21 @@ def infer_task_name_from_filename(fname: str) -> str | None:
     name = fname.lower()
     # Ignore practice files by caller
     parts = []
-    if 'stop_signal' in name or 'stopSignal' in name or 'stop-signal' in name:
+    if 'stop_signal' in name or 'stopsignal' in name or 'stop-signal' in name:
         parts.append('stop_signal')
-    if 'go_nogo' in name or 'goNogo' in name or 'go-nogo' in name:
+    if 'go_nogo' in name or 'gonogo' in name or 'go-nogo' in name:
         parts.append('go_nogo')
-    if 'shape_matching' in name or 'shapeMatching' in name or 'shape-matching' in name:
+    if 'shape_matching' in name or 'shapematching' in name or 'shape-matching' in name:
         parts.append('shape_matching')
-    if 'directed_forgetting' in name or 'directedForgetting' in name or 'directed-forgetting' in name:
+    if 'directed_forgetting' in name or 'directedforgetting' in name or 'directed-forgetting' in name:
         parts.append('directed_forgetting')
-    if 'spatial_task_switching' in name or 'spatialTaskSwitching' in name or 'spatial-task-switching' in name:
+    if 'spatial_task_switching' in name or 'spatialtaskswitching' in name or 'spatial-task-switching' in name:
         parts.append('spatial_task_switching')
     if 'flanker' in name:
         parts.append('flanker')
-    if 'cued_task_switching' in name or 'cuedTaskSwitching' in name or 'cued-task-switching' in name:
+    if 'cued_task_switching' in name or 'cuedtaskswitching' in name or 'cued-task-switching' in name:
         parts.append('cued_task_switching')
-    if 'n_back' in name or 'nback' in name or 'nBack' in name or 'n-back' in name:
+    if 'n_back' in name or 'nback' in name or 'nback' in name or 'n-back' in name:
         parts.append('n_back')
     if not parts:
         return None
