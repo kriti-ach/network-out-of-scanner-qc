@@ -701,11 +701,6 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, cued_with_fla
     correct_col = 'correct' if cued_with_flanker else 'correct_trial'
     
     if cued_with_flanker:
-        # For cued+flanker: task_condition and cue_condition are on row N, but correct is on a later row
-        # Find the closest non-null correct value for each condition row
-        print(f"DEBUG cued+flanker: cond_name={cond_name}, mask_acc.sum()={mask_acc.sum()}")
-        print(f"DEBUG cued+flanker: mask_acc.index (first 10)={list(mask_acc[mask_acc].index[:10]) if mask_acc.sum() > 0 else []}")
-        print(f"DEBUG cued+flanker: df.index (first 10)={list(df.index[:10])}")
         
         idx_list = list(df.index)
         correct_series = pd.Series(index=df.index, dtype=float)
@@ -725,13 +720,8 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, cued_with_fla
         # Create masks using the shifted correct values
         correct_mask = correct_series == 1
         mask_rt = mask_acc & correct_mask
-        
         # For accuracy, use the mean of correct values (1 = correct, 0 = incorrect)
-        print(f'correct_series: {correct_series}')
-        print(f'mask_acc: {mask_acc}')
-        print(f'correct_series[mask_acc]: {correct_series[mask_acc]}')
         acc_value = correct_series[mask_acc].mean() if mask_acc.sum() > 0 else np.nan
-        print(f"DEBUG cued+flanker: acc_value={acc_value}")
         
     else:
         correct_mask = df[correct_col] == 1
@@ -842,7 +832,10 @@ def compute_cued_task_switching_metrics(
                 print(f'flanker: {flanker}')
                 print(f'task: {task}')
                 print(f'cue: {cue}')
-                print(f'mask_acc: {mask_acc}')
+                print(f'df[flanker_col]: {df[flanker_col]}')
+                print(f'df["task_condition"]: {df["task_condition"]}')
+                print(f'df["cue_condition"]: {df["cue_condition"]}')
+                #print(f'mask_acc: {mask_acc}')
                 calculate_basic_metrics(df, mask_acc, cond, metrics, cued_with_flanker=True)
             elif condition_type == 'go_nogo':
                 # cond format: {go_nogo}_t{task}_c{cue}
