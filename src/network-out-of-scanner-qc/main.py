@@ -55,6 +55,7 @@ initialize_qc_csvs(tasks, output_path, include_session=cfg.is_fmri)
 
 violations_df = pd.DataFrame()
 trimmed_data = []
+files_without_fmri_results = []
 if cfg.is_fmri:
     # In-scanner (CSV per session) iterate and process, ignoring practice
     for subj_dir in glob.glob(str(input_root / 's*')):
@@ -67,6 +68,15 @@ if cfg.is_fmri:
                 if '/practice/' in file.lower():
                     continue
                 filename = Path(file).name
+                # Track files without '__fmri_results' in name
+                if '__fmri_results' not in filename:
+                    session = Path(ses_dir).name
+                    files_without_fmri_results.append({
+                        'subject_id': subject_id,
+                        'session': session,
+                        'filename': filename,
+                        'file_path': file
+                    })
                 task_name = infer_task_name_from_filename(filename)
                 if not task_name:
                     continue
@@ -179,3 +189,10 @@ if len(trimmed_records) > 0:
     trimmed_df = pd.DataFrame(trimmed_records)
     out_csv = Path('/oak/stanford/groups/russpold/data/network_grant/behavioral_data/trimmed_fmri_behavior_tasks.csv') if cfg.is_fmri else Path('/oak/stanford/groups/russpold/data/network_grant/behavioral_data/trimmed_out_of_scanner_tasks.csv')
     trimmed_df.to_csv(out_csv, index=False)
+
+# Save list of files without '__fmri_results' in name
+if cfg.is_fmri and len(files_without_fmri_results) > 0:
+    files_df = pd.DataFrame(files_without_fmri_results)
+    files_output_path = output_path / 'files_without_fmri_results.csv'
+    files_df.to_csv(files_output_path, index=False)
+    print(f"Saved {len(files_without_fmri_results)} files without '__fmri_results' to {files_output_path}")
