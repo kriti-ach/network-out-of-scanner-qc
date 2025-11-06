@@ -833,6 +833,8 @@ def compute_cued_task_switching_metrics(
                 print(f'task: {task}')
                 print(f'cue: {cue}')
                 print(f'df[flanker_col]: {df[flanker_col]}')
+                print(f'df.columns: {df.columns}')
+                print(f'df.head(): {df.head()}')
                 print(f'df["task_condition"].unique(): {df["task_condition"].unique()}')
                 print(f'df["cue_condition"].unique(): {df["cue_condition"].unique()}')
                 print(f'df["task_condition"] == "stay": {(df["task_condition"] == "stay").any()}')
