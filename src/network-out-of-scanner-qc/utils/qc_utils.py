@@ -724,11 +724,11 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, cued_with_fla
         correct_mask = correct_series == 1
         mask_rt = mask_acc & correct_mask
         # For accuracy, use the shifted correct values for the masked rows
-        acc_value = correct_series[mask_acc].mean() if mask_acc.sum() > 0 else np.nan
+        acc_value = correct_series[mask_acc].notna().mean() if mask_acc.sum() > 0 else np.nan
     else:
         correct_mask = df[correct_col] == 1
         mask_rt = mask_acc & correct_mask
-        acc_value = df[correct_col][mask_acc].mean() if mask_acc.sum() > 0 else np.nan
+        acc_value = df[correct_col][mask_acc].notna().mean() if mask_acc.sum() > 0 else np.nan
     
     mask_omission = mask_acc & (df['key_press'] == -1) if 'key_press' in df.columns else pd.Series([False] * len(df))
     mask_commission = mask_acc & (df['key_press'] != -1) & (~correct_mask) if 'key_press' in df.columns else pd.Series([False] * len(df))
