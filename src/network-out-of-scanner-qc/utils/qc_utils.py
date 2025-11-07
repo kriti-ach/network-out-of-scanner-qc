@@ -706,22 +706,18 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict):
         None: Updates metrics_dict in place
     """
     # Use 'correct' if instructed and present; else default to 'correct_trial' then 'correct'
-    correct_col = 'correct_trial' if 'correct_trial' in df.columns else 'correct'
-
-    # Adjust the mask based on whether the correct_col is 'correct', which it is in flanker + cued in-scanner
-    if correct_col == 'correct':
-        # Shift the mask by 1 to account for the correct column being one row below
-        correct_mask = df[correct_col].shift(-1) == 1  # Shift the column up by 1
+    correct_col = 'correct' if cued_with_flanker else 'correct_trial'
+    if cued_with_flanker:
+        mask_rt = mask_acc & (df[correct_col].iloc[mask_acc.index + 1] == 1)
+        print(f'df[correct_col].iloc[mask_acc.index]: {df[correct_col].iloc[mask_acc.index]}')
+        print(f'df[correct_col].iloc[mask_acc.index + 1]: {df[correct_col].iloc[mask_acc.index + 1]}')
     else:
-        correct_mask = df[correct_col] == 1
-
-    mask_rt = mask_acc & correct_mask
+        mask_rt = mask_acc & (df[correct_col] == 1)
     mask_omission = mask_acc & (df['key_press'] == -1) if 'key_press' in df.columns else pd.Series([False] * len(df))
-    mask_commission = mask_acc & (df['key_press'] != -1) & correct_mask if 'key_press' in df.columns else pd.Series([False] * len(df))
-
+    # Commission: responded but incorrect (df[correct_col] == 0 means incorrect)
+    mask_commission = mask_acc & (df['key_press'] != -1) & (df[correct_col] == 0) if 'key_press' in df.columns else pd.Series([False] * len(df))
     total_num_trials = len(df[mask_acc])
-
-    acc_value = df[correct_col][mask_acc].mean() if len(df[mask_acc]) > 0 else np.nan
+    acc_value = df[correct_col].loc[mask_acc].mean() if len(df[mask_acc]) > 0 else np.nan
     metrics_dict[f'{cond_name}_acc'] = acc_value
     metrics_dict[f'{cond_name}_rt'] = calculate_rt(df, mask_rt)
     metrics_dict[f'{cond_name}_omission_rate'] = calculate_omission_rate(df, mask_omission, total_num_trials)
