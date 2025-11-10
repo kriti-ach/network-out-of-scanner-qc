@@ -259,12 +259,6 @@ def nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv, sessio
             if subject_id == 's1351':
                 print(f"mismatch_col: {mismatch_col}, match_col: {match_col}, mismatch_val: {mismatch_val}, match_val: {match_val}")
             if pd.notna(mismatch_val) and pd.notna(match_val):
-                if match_val == 0.4:
-                    print(f"mismatch_val: {mismatch_val}, match_val: {match_val}")
-                    print(f'mismatch_combined_threshold: {MISMATCH_COMBINED_THRESHOLD}, match_combined_threshold: {MATCH_COMBINED_THRESHOLD}')
-                    print(f'mismatch_val < mismatch_combined_threshold: {mismatch_val < MISMATCH_COMBINED_THRESHOLD}')
-                    print(f'match_val < match_combined_threshold: {match_val < MATCH_COMBINED_THRESHOLD}')
-                    print(f'mismatch_val < mismatch_combined_threshold and match_val < match_combined_threshold: {mismatch_val < MISMATCH_COMBINED_THRESHOLD and match_val < MATCH_COMBINED_THRESHOLD}')
                 if (mismatch_val < MISMATCH_COMBINED_THRESHOLD) and (match_val < MATCH_COMBINED_THRESHOLD):
                     exclusion_df = append_exclusion_row(
                         exclusion_df, subject_id, f'{mismatch_col}_combined', mismatch_val, MISMATCH_COMBINED_THRESHOLD, session
@@ -272,6 +266,8 @@ def nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv, sessio
                     exclusion_df = append_exclusion_row(
                         exclusion_df, subject_id, f'{match_col}_combined', match_val, MATCH_COMBINED_THRESHOLD, session
                     )
+                if subject_id == 's1351' and match_val == 0.4:
+                    print(f"exclusion_df: {exclusion_df}")
     return exclusion_df
 
 def nback_get_columns(task_csv, load):
