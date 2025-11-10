@@ -242,11 +242,7 @@ def nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv, sessio
     for load in [1, 2, 3]:
         load_str = f"{load}.0back"
         mismatch_cols = [col for col in task_csv.columns if f'mismatch_{load_str}_' in col and 'acc' in col and 'nogo' not in col and 'stop_fail' not in col]
-        if subject_id == 's1351':
-            print(f"mismatch_cols: {mismatch_cols}")
         match_cols = [col for col in task_csv.columns if f'match_{load_str}_' in col and 'acc' in col and 'mismatch' not in col and 'nogo' not in col and 'stop_fail' not in col]
-        if subject_id == 's1351':
-            print(f"match_cols: {match_cols}")
         mismatch_map = {suffix(c, f"mismatch_{load_str}_"): c for c in mismatch_cols}
         match_map = {suffix(c, f"match_{load_str}_"): c for c in match_cols}
         common_suffixes = set(mismatch_map.keys()) & set(match_map.keys())
@@ -263,6 +259,12 @@ def nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv, sessio
             if subject_id == 's1351':
                 print(f"mismatch_col: {mismatch_col}, match_col: {match_col}, mismatch_val: {mismatch_val}, match_val: {match_val}")
             if pd.notna(mismatch_val) and pd.notna(match_val):
+                if match_val == 0.4:
+                    print(f"mismatch_val: {mismatch_val}, match_val: {match_val}")
+                    print(f'mismatch_combined_threshold: {MISMATCH_COMBINED_THRESHOLD}, match_combined_threshold: {MATCH_COMBINED_THRESHOLD}')
+                    print(f'mismatch_val < mismatch_combined_threshold: {mismatch_val < MISMATCH_COMBINED_THRESHOLD}')
+                    print(f'match_val < match_combined_threshold: {match_val < MATCH_COMBINED_THRESHOLD}')
+                    print(f'mismatch_val < mismatch_combined_threshold and match_val < match_combined_threshold: {mismatch_val < MISMATCH_COMBINED_THRESHOLD and match_val < MATCH_COMBINED_THRESHOLD}')
                 if (mismatch_val < MISMATCH_COMBINED_THRESHOLD) and (match_val < MATCH_COMBINED_THRESHOLD):
                     exclusion_df = append_exclusion_row(
                         exclusion_df, subject_id, f'{mismatch_col}_combined', mismatch_val, MISMATCH_COMBINED_THRESHOLD, session
