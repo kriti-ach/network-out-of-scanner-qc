@@ -69,8 +69,6 @@ def append_exclusion_row(exclusion_df, subject_id, metric_name, metric_value, th
         
         existing = exclusion_df[duplicate_condition]
         if len(existing) > 0:
-            if subject_id == 's1351' and 'match_2.0back_acc_combined' in metric_name:
-                print(f"Duplicate detected for {metric_name}, skipping. Existing rows:\n{existing}")
             return exclusion_df  # Skip duplicate
     
     # Ensure session column exists and is in the right position (after subject_id)
@@ -261,26 +259,13 @@ def nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv, sessio
             mismatch_val = row[mismatch_col]
             match_val = row[match_col]
             if pd.notna(mismatch_val) and pd.notna(match_val):
-                if subject_id == 's1351' and match_val == 0.4:
-                    print(f"went through pd.notna(mismatch_val) and pd.notna(match_val)")
-                    print(f"mismatch_val: {mismatch_val}, match_val: {match_val}")
-                    print(f"MISMATCH_COMBINED_THRESHOLD: {MISMATCH_COMBINED_THRESHOLD}, MATCH_COMBINED_THRESHOLD: {MATCH_COMBINED_THRESHOLD}")
                 if (mismatch_val < MISMATCH_COMBINED_THRESHOLD) and (match_val < MATCH_COMBINED_THRESHOLD):
-                    if subject_id == 's1351' and match_val == 0.4:
-                        print(f"went through (mismatch_val < MISMATCH_COMBINED_THRESHOLD) and (match_val < MATCH_COMBINED_THRESHOLD)")
-                        print(f"About to append mismatch: {f'{mismatch_col}_combined'}")
                     exclusion_df = append_exclusion_row(
                         exclusion_df, subject_id, f'{mismatch_col}_combined', mismatch_val, MISMATCH_COMBINED_THRESHOLD, session
                     )
-                    if subject_id == 's1351' and match_val == 0.4:
-                        print(f"After mismatch append, exclusion_df length: {len(exclusion_df)}")
-                        print(f"About to append match: {f'{match_col}_combined'}")
                     exclusion_df = append_exclusion_row(
                         exclusion_df, subject_id, f'{match_col}_combined', match_val, MATCH_COMBINED_THRESHOLD, session
                     )
-                    if subject_id == 's1351' and match_val == 0.4:
-                        print(f"After match append, exclusion_df length: {len(exclusion_df)}")
-                        print(f"Final exclusion_df:\n{exclusion_df}")
     return exclusion_df
 
 def nback_get_columns(task_csv, load):
