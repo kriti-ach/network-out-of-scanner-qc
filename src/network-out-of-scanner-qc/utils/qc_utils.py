@@ -490,12 +490,21 @@ def preprocess_rt_tail_cutoff(df: pd.DataFrame, subject_id: str | None = None, s
     The cutoff removes ALL rows (including fixations, etc.) after the
     last valid test trial.
 
-    Returns a tuple: (df_trimmed, cutoff_index_within_test_trials, cutoff_before_halfway)
+    Returns a tuple: (df_trimmed, cutoff_index_within_test_trials, cutoff_before_halfway, proportion_blank)
 
-    If no tail is found to trim, returns (df, None, False).
+    If no tail is found to trim, returns (df, None, False, proportion_blank).
     """
     if 'trial_id' not in df.columns or 'rt' not in df.columns:
-        return df, None, False
+        # Still calculate proportion of blank trials
+        if 'rt' in df.columns:
+            df['rt'] = pd.to_numeric(df['rt'], errors='coerce').fillna(-1)
+            if len(df) > 0:
+                proportion_blank = (df['rt'] == -1).sum() / len(df)
+            else:
+                proportion_blank = 0.0
+        else:
+            proportion_blank = 0.0
+        return df, None, False, proportion_blank
 
     # Ensure 'rt' column is numeric; treat NaN as non-response (-1)
     df['rt'] = pd.to_numeric(df['rt'], errors='coerce').fillna(-1)
@@ -504,28 +513,77 @@ def preprocess_rt_tail_cutoff(df: pd.DataFrame, subject_id: str | None = None, s
     valid_mask_all = df['rt'] != -1
     if not valid_mask_all.any():
         # No valid responses at all; nothing to trim specially here
-        return df, None, False
+        # Calculate proportion of blank trials
+        if 'trial_id' in df.columns:
+            test_trials = df[df['trial_id'] == 'test_trial']
+            if len(test_trials) > 0:
+                proportion_blank = 1.0  # All are blank
+            else:
+                proportion_blank = 0.0
+        else:
+            proportion_blank = 1.0  # All are blank
+        return df, None, False, proportion_blank
 
     last_valid_idx = valid_mask_all[valid_mask_all].index[-1]
     if last_valid_idx == df.index[-1]:
         # Already ends with a valid response; no trailing -1 segment
-        return df, None, False
+        # Still calculate proportion of blank trials
+        if 'trial_id' in df.columns:
+            test_trials = df[df['trial_id'] == 'test_trial']
+            if len(test_trials) > 0:
+                blank_trials = (test_trials['rt'] == -1).sum()
+                proportion_blank = blank_trials / len(test_trials)
+            else:
+                proportion_blank = 0.0
+        else:
+            if len(df) > 0:
+                blank_trials = (df['rt'] == -1).sum()
+                proportion_blank = blank_trials / len(df)
+            else:
+                proportion_blank = 0.0
+        return df, None, False, proportion_blank
 
     # Verify that ALL rows after last_valid_idx are indeed -1
     tail_all_minus1 = (df.loc[last_valid_idx:].iloc[1:]['rt'] == -1).all()
     if not tail_all_minus1:
         # Mixed tail; do not trim
-        return df, None, False
+        # Still calculate proportion of blank trials
+        if 'trial_id' in df.columns:
+            test_trials = df[df['trial_id'] == 'test_trial']
+            if len(test_trials) > 0:
+                blank_trials = (test_trials['rt'] == -1).sum()
+                proportion_blank = blank_trials / len(test_trials)
+            else:
+                proportion_blank = 0.0
+        else:
+            if len(df) > 0:
+                blank_trials = (df['rt'] == -1).sum()
+                proportion_blank = blank_trials / len(df)
+            else:
+                proportion_blank = 0.0
+        return df, None, False, proportion_blank
 
     # Additional guard: require that the last last_n_test_trials test_trial RTs are -1
     if 'trial_id' in df.columns:
         df_test_end = df[df['trial_id'] == 'test_trial']
         if len(df_test_end) < last_n_test_trials:
             # Not enough trailing test trials to be confident; do not trim
-            return df, None, False
+            # Still calculate proportion of blank trials
+            if len(df_test_end) > 0:
+                blank_trials = (df_test_end['rt'] == -1).sum()
+                proportion_blank = blank_trials / len(df_test_end)
+            else:
+                proportion_blank = 0.0
+            return df, None, False, proportion_blank
         if not (pd.to_numeric(df_test_end['rt'].tail(last_n_test_trials), errors='coerce').fillna(-1) == -1).all():
             # Do not trim unless the final last_n_test_trials test trials are all -1
-            return df, None, False
+            # Still calculate proportion of blank trials
+            if len(df_test_end) > 0:
+                blank_trials = (df_test_end['rt'] == -1).sum()
+                proportion_blank = blank_trials / len(df_test_end)
+            else:
+                proportion_blank = 0.0
+            return df, None, False, proportion_blank
 
     # Trim to include up to and including last_valid_idx
     cutoff_iloc = df.index.get_loc(last_valid_idx)
@@ -535,8 +593,24 @@ def preprocess_rt_tail_cutoff(df: pd.DataFrame, subject_id: str | None = None, s
     cutoff_pos = cutoff_iloc + 1  # first dropped row position in full df (0-based index within df)
     halfway = len(df) / 2.0
     cutoff_before_halfway = cutoff_pos < halfway
+    
+    # Calculate proportion of blank trials (rt == -1) in original dataframe
+    if 'trial_id' in df.columns:
+        test_trials = df[df['trial_id'] == 'test_trial']
+        if len(test_trials) > 0:
+            blank_trials = (test_trials['rt'] == -1).sum()
+            proportion_blank = blank_trials / len(test_trials)
+        else:
+            proportion_blank = 0.0
+    else:
+        # If no trial_id, check all rows
+        if len(df) > 0:
+            blank_trials = (df['rt'] == -1).sum()
+            proportion_blank = blank_trials / len(df)
+        else:
+            proportion_blank = 0.0
 
-    return df_trimmed, cutoff_pos, cutoff_before_halfway
+    return df_trimmed, cutoff_pos, cutoff_before_halfway, proportion_blank
 
 def sort_subject_ids(df):
     # Only process rows where subject_id is a string starting with 's'

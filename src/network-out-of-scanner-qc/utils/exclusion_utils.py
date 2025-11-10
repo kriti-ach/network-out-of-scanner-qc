@@ -329,6 +329,10 @@ def check_other_exclusion_criteria(task_name, task_csv, exclusion_df):
                     value = row[col_name]
                     if compare_to_threshold(col_name, value, ACC_THRESHOLD):
                         exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, ACC_THRESHOLD, session)
+        else:
+            # For n-back tasks in fMRI: exclude based on condition-specific accuracy (match/mismatch), not overall_acc
+            # This is already handled by check_n_back_exclusion_criteria, so we don't need to do anything here
+            pass
         
         # Check omission rate columns (but exclude N-back specific omission rates)
         # Skip exclusion for fMRI (will be flagged instead)
@@ -360,3 +364,49 @@ def remove_some_flags_for_exclusion(task_name, exclusion_df):
         exclusion_df = exclusion_df[~exclusion_df['metric'].str.contains('stop_success', na=False) & ~exclusion_df['metric'].str.contains('collapsed', na=False)]
     
     return exclusion_df
+
+def create_combined_exclusions_csv(tasks, exclusions_output_path):
+    """
+    Create a combined exclusions CSV from all individual task exclusion files.
+    
+    Args:
+        tasks (list): List of task names
+        exclusions_output_path (Path): Path to the exclusions output folder
+        
+    Returns:
+        None: Saves combined exclusions CSV to exclusions_output_path / 'all_exclusions.csv'
+    """
+    all_exclusions = []
+    for task in tasks:
+        exclusion_file = exclusions_output_path / f"excluded_data_{task}.csv"
+        if exclusion_file.exists():
+            try:
+                task_exclusions = pd.read_csv(exclusion_file)
+                if len(task_exclusions) > 0:
+                    # Add task_name column
+                    task_exclusions['task_name'] = task
+                    # Reorder columns: subject_id, session (if exists), task_name, then rest
+                    cols = list(task_exclusions.columns)
+                    if 'session' in cols:
+                        # For in-scanner: subject_id, session, task_name, then rest
+                        cols.remove('subject_id')
+                        cols.remove('session')
+                        cols.remove('task_name')
+                        task_exclusions = task_exclusions[['subject_id', 'session', 'task_name'] + cols]
+                    else:
+                        # For out-of-scanner: subject_id, task_name, then rest
+                        cols.remove('subject_id')
+                        cols.remove('task_name')
+                        task_exclusions = task_exclusions[['subject_id', 'task_name'] + cols]
+                    all_exclusions.append(task_exclusions)
+            except Exception as e:
+                print(f"Error reading exclusion file for {task}: {str(e)}")
+    
+    if len(all_exclusions) > 0:
+        combined_exclusions = pd.concat(all_exclusions, ignore_index=True)
+        # Sort by subject_id (and session if present)
+        if 'session' in combined_exclusions.columns:
+            combined_exclusions = combined_exclusions.sort_values(['subject_id', 'session', 'task_name']).reset_index(drop=True)
+        else:
+            combined_exclusions = combined_exclusions.sort_values(['subject_id', 'task_name']).reset_index(drop=True)
+        combined_exclusions.to_csv(exclusions_output_path / 'all_exclusions.csv', index=False)

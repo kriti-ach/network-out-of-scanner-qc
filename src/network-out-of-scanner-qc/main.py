@@ -18,7 +18,7 @@ from utils.qc_utils import (
 )
 from utils.violations_utils import compute_violations, aggregate_violations, plot_violations, create_violations_matrices
 from utils.globals import SINGLE_TASKS, DUAL_TASKS, LAST_N_TEST_TRIALS
-from utils.exclusion_utils import check_exclusion_criteria, remove_some_flags_for_exclusion
+from utils.exclusion_utils import check_exclusion_criteria, remove_some_flags_for_exclusion, create_combined_exclusions_csv
 from utils.config import load_config
 
 # Optional CLI override: --mode=fmri or --mode=out_of_scanner
@@ -75,7 +75,7 @@ if cfg.is_fmri:
                     if 'flanker' in task_name and 'stop_signal' in task_name:
                         df = normalize_flanker_conditions(df)
                     # Generic RT tail cutoff
-                    df_trimmed, cut_pos, cut_before_halfway = preprocess_rt_tail_cutoff(
+                    df_trimmed, cut_pos, cut_before_halfway, proportion_blank = preprocess_rt_tail_cutoff(
                         df,
                         subject_id=subject_id,
                         session=Path(ses_dir).name,
@@ -89,6 +89,7 @@ if cfg.is_fmri:
                             'task_name': task_name,
                             'cutoff_index': int(cut_pos),
                             'before_halfway': bool(cut_before_halfway),
+                            'proportion_blank_trials': float(proportion_blank),
                         })
                         if cut_before_halfway:
                             continue
@@ -120,7 +121,7 @@ else:
                         if 'flanker' in task_name and 'stop_signal' in task_name:
                             df = normalize_flanker_conditions(df)
                         # Generic RT tail cutoff
-                        df_trimmed, cut_pos, cut_before_halfway = preprocess_rt_tail_cutoff(
+                        df_trimmed, cut_pos, cut_before_halfway, proportion_blank = preprocess_rt_tail_cutoff(
                             df,
                             subject_id=subject_id,
                             session=None,
@@ -134,6 +135,7 @@ else:
                                 'task_name': task_name,
                                 'cutoff_index': int(cut_pos),
                                 'before_halfway': bool(cut_before_halfway),
+                                'proportion_blank_trials': float(proportion_blank),
                             })
                             if cut_before_halfway:
                                 continue
@@ -163,8 +165,11 @@ for task in tasks:
             condition_acc_flags.insert(1, 'session', pd.Series(dtype=str))
             omission_rate_flags.insert(1, 'session', pd.Series(dtype=str))
         
-        # Get all condition accuracy columns (exclude overall_acc)
+        # Get all condition accuracy columns (exclude overall_acc, and for n-back tasks exclude match/mismatch which use their own thresholds)
         acc_cols = [col for col in task_csv.columns if col.endswith('_acc') and col != 'overall_acc' and 'nogo' not in col and 'stop_fail' not in col]
+        # For n-back tasks, exclude match/mismatch accuracy columns (they're handled by n-back exclusion with MATCH_THRESHOLD/MISMATCH_THRESHOLD)
+        if 'n_back' in task:
+            acc_cols = [col for col in acc_cols if 'match_' not in col and 'mismatch_' not in col]
         # Get all omission rate columns
         omission_rate_cols = [col for col in task_csv.columns if 'omission_rate' in col]
         
@@ -225,7 +230,10 @@ for task in tasks:
     # Save both datasets
     flagged_df.to_csv(flags_output_path / f"flagged_data_{task}.csv", index=False)
     exclusion_df.to_csv(exclusions_output_path / f"excluded_data_{task}.csv", index=False)
-        
+
+# Create combined exclusions CSV (after all tasks are processed)
+create_combined_exclusions_csv(tasks, exclusions_output_path)
+
 if not cfg.is_fmri:
     violations_df.to_csv(violations_output_path / 'violations_data.csv', index=False)
     aggregated_violations_df = aggregate_violations(violations_df)
