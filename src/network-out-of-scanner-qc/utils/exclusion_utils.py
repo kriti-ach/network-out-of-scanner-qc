@@ -372,14 +372,16 @@ def remove_some_flags_for_exclusion(task_name, exclusion_df):
 
 def create_combined_exclusions_csv(tasks, exclusions_output_path):
     """
-    Create a combined exclusions CSV from all individual task exclusion files.
+    Create combined and summarized exclusions CSVs from all individual task exclusion files.
     
     Args:
         tasks (list): List of task names
         exclusions_output_path (Path): Path to the exclusions output folder
         
     Returns:
-        None: Saves combined exclusions CSV to exclusions_output_path / 'all_exclusions.csv'
+        None: Saves two CSVs:
+            - all_exclusions.csv: All exclusion rows with all details
+            - summarized_exclusions.csv: One row per subject-session-task combination
     """
     all_exclusions = []
     for task in tasks:
@@ -414,4 +416,18 @@ def create_combined_exclusions_csv(tasks, exclusions_output_path):
             combined_exclusions = combined_exclusions.sort_values(['subject_id', 'session', 'task_name']).reset_index(drop=True)
         else:
             combined_exclusions = combined_exclusions.sort_values(['subject_id', 'task_name']).reset_index(drop=True)
+        
+        # Save all_exclusions.csv with all details
         combined_exclusions.to_csv(exclusions_output_path / 'all_exclusions.csv', index=False)
+        
+        # Create summarized_exclusions.csv: one row per subject-session-task combination
+        if 'session' in combined_exclusions.columns:
+            # For in-scanner: group by subject_id, session, and task_name
+            summarized = combined_exclusions[['subject_id', 'session', 'task_name']].drop_duplicates()
+            summarized = summarized.sort_values(['subject_id', 'session', 'task_name']).reset_index(drop=True)
+        else:
+            # For out-of-scanner: group by subject_id and task_name
+            summarized = combined_exclusions[['subject_id', 'task_name']].drop_duplicates()
+            summarized = summarized.sort_values(['subject_id', 'task_name']).reset_index(drop=True)
+        
+        summarized.to_csv(exclusions_output_path / 'summarized_exclusions.csv', index=False)
