@@ -241,11 +241,42 @@ def nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv, sessio
     """
     for load in [1, 2, 3]:
         load_str = f"{load}.0back"
-        mismatch_cols = [col for col in task_csv.columns if f'mismatch_{load_str}_' in col and 'acc' in col and 'nogo' not in col and 'stop_fail' not in col]
-        match_cols = [col for col in task_csv.columns if f'match_{load_str}_' in col and 'acc' in col and 'mismatch' not in col and 'nogo' not in col and 'stop_fail' not in col]
+        # Find columns that match the pattern (with or without trailing underscore)
+        # Pattern: mismatch_2.0back_acc or mismatch_2.0back_<suffix>_acc
+        mismatch_cols = [col for col in task_csv.columns 
+                        if f'mismatch_{load_str}' in col and 'acc' in col 
+                        and 'nogo' not in col and 'stop_fail' not in col]
+        match_cols = [col for col in task_csv.columns 
+                     if f'match_{load_str}' in col and 'acc' in col 
+                     and 'mismatch' not in col and 'nogo' not in col and 'stop_fail' not in col]
 
-        mismatch_map = {suffix(c, f"mismatch_{load_str}_"): c for c in mismatch_cols}
-        match_map = {suffix(c, f"match_{load_str}_"): c for c in match_cols}
+        # Extract suffix after the load string (could be empty or have additional condition info)
+        # For mismatch_2.0back_acc, prefix is "mismatch_2.0back", suffix is "_acc"
+        # For mismatch_2.0back_<condition>_acc, prefix is "mismatch_2.0back_", suffix is "<condition>_acc"
+        mismatch_map = {}
+        for col in mismatch_cols:
+            # Try with underscore first, then without
+            prefix_with_underscore = f"mismatch_{load_str}_"
+            if prefix_with_underscore in col:
+                cond_suffix = suffix(col, prefix_with_underscore)
+            else:
+                # No underscore, so the suffix is everything after "mismatch_2.0back"
+                prefix_no_underscore = f"mismatch_{load_str}"
+                cond_suffix = suffix(col, prefix_no_underscore)
+            mismatch_map[cond_suffix] = col
+        
+        match_map = {}
+        for col in match_cols:
+            # Try with underscore first, then without
+            prefix_with_underscore = f"match_{load_str}_"
+            if prefix_with_underscore in col:
+                cond_suffix = suffix(col, prefix_with_underscore)
+            else:
+                # No underscore, so the suffix is everything after "match_2.0back"
+                prefix_no_underscore = f"match_{load_str}"
+                cond_suffix = suffix(col, prefix_no_underscore)
+            match_map[cond_suffix] = col
+        
         common_suffixes = set(mismatch_map.keys()) & set(match_map.keys())
 
         for cond_suffix in common_suffixes:
