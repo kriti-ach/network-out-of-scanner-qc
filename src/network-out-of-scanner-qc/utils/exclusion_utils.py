@@ -241,42 +241,14 @@ def nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv, sessio
     """
     for load in [1, 2, 3]:
         load_str = f"{load}.0back"
-        # Find columns that match the pattern (with or without trailing underscore)
-        # Pattern: mismatch_2.0back_acc or mismatch_2.0back_<suffix>_acc
-        mismatch_cols = [col for col in task_csv.columns 
-                        if f'mismatch_{load_str}' in col and 'acc' in col 
-                        and 'nogo' not in col and 'stop_fail' not in col]
-        match_cols = [col for col in task_csv.columns 
-                     if f'match_{load_str}' in col and 'acc' in col 
-                     and 'mismatch' not in col and 'nogo' not in col and 'stop_fail' not in col]
-
-        # Extract suffix after the load string (could be empty or have additional condition info)
-        # For mismatch_2.0back_acc, prefix is "mismatch_2.0back", suffix is "_acc"
-        # For mismatch_2.0back_<condition>_acc, prefix is "mismatch_2.0back_", suffix is "<condition>_acc"
-        mismatch_map = {}
-        for col in mismatch_cols:
-            # Try with underscore first, then without
-            prefix_with_underscore = f"mismatch_{load_str}_"
-            if prefix_with_underscore in col:
-                cond_suffix = suffix(col, prefix_with_underscore)
-            else:
-                # No underscore, so the suffix is everything after "mismatch_2.0back"
-                prefix_no_underscore = f"mismatch_{load_str}"
-                cond_suffix = suffix(col, prefix_no_underscore)
-            mismatch_map[cond_suffix] = col
-        
-        match_map = {}
-        for col in match_cols:
-            # Try with underscore first, then without
-            prefix_with_underscore = f"match_{load_str}_"
-            if prefix_with_underscore in col:
-                cond_suffix = suffix(col, prefix_with_underscore)
-            else:
-                # No underscore, so the suffix is everything after "match_2.0back"
-                prefix_no_underscore = f"match_{load_str}"
-                cond_suffix = suffix(col, prefix_no_underscore)
-            match_map[cond_suffix] = col
-        
+        mismatch_cols = [col for col in task_csv.columns if f'mismatch_{load_str}_' in col and 'acc' in col and 'nogo' not in col and 'stop_fail' not in col]
+        if subject_id == 's1351':
+            print("f'mismatch_cols': {mismatch_cols}")
+        match_cols = [col for col in task_csv.columns if f'match_{load_str}_' in col and 'acc' in col and 'mismatch' not in col and 'nogo' not in col and 'stop_fail' not in col]
+        if subject_id == 's1351':
+            print("f'match_cols': {match_cols}")
+        mismatch_map = {suffix(c, f"mismatch_{load_str}_"): c for c in mismatch_cols}
+        match_map = {suffix(c, f"match_{load_str}_"): c for c in match_cols}
         common_suffixes = set(mismatch_map.keys()) & set(match_map.keys())
 
         for cond_suffix in common_suffixes:
@@ -284,6 +256,8 @@ def nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv, sessio
             match_col = match_map[cond_suffix]
             mismatch_val = row[mismatch_col]
             match_val = row[match_col]
+            if subject_id == 's1351':
+                print("f'mismatch_col': {mismatch_col}, f'match_col': {match_col}, f'mismatch_val': {mismatch_val}, f'match_val': {match_val}")
             if pd.notna(mismatch_val) and pd.notna(match_val):
                 if (mismatch_val < MISMATCH_COMBINED_THRESHOLD) and (match_val < MATCH_COMBINED_THRESHOLD):
                     exclusion_df = append_exclusion_row(
