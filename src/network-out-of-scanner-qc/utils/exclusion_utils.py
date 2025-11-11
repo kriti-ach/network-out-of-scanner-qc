@@ -212,8 +212,8 @@ def check_go_nogo_exclusion_criteria(task_name, task_csv, exclusion_df):
                         
                         # New exclusion criteria: (go < 0.8 or nogo < 0.2) AND (go < 0.55 or nogo < 0.55)
                         if pd.notna(go_acc_value) and pd.notna(nogo_acc_value):
-                            exclude_rule1 = (go_acc_value < GONOGO_GO_ACC_THRESHOLD_1) or (nogo_acc_value < GONOGO_NOGO_ACC_THRESHOLD_1)
-                            exclude_rule2 = (go_acc_value < GONOGO_GO_ACC_THRESHOLD_2) or (nogo_acc_value < GONOGO_NOGO_ACC_THRESHOLD_2)
+                            exclude_rule1 = (go_acc_value <= GONOGO_GO_ACC_THRESHOLD_1) or (nogo_acc_value <= GONOGO_NOGO_ACC_THRESHOLD_1)
+                            exclude_rule2 = (go_acc_value <= GONOGO_GO_ACC_THRESHOLD_2) or (nogo_acc_value <= GONOGO_NOGO_ACC_THRESHOLD_2)
                             
                             if exclude_rule1 and exclude_rule2:
                                 # Exclude based on whichever rule was triggered
@@ -344,8 +344,8 @@ def nback_check_fmri_exclusion_criteria(exclusion_df, subject_id, row, load, tas
                 mismatch_thresh_2 = NBACK_2BACK_MISMATCH_ACC_COMBINED_THRESHOLD_2
             
             # Check both rules
-            exclude_rule1 = (match_val < match_thresh_1) or (mismatch_val < mismatch_thresh_1)
-            exclude_rule2 = (match_val < match_thresh_2) or (mismatch_val < mismatch_thresh_2)
+            exclude_rule1 = (match_val <= match_thresh_1) or (mismatch_val <= mismatch_thresh_1)
+            exclude_rule2 = (match_val <= match_thresh_2) or (mismatch_val <= mismatch_thresh_2)
             
             if exclude_rule1 and exclude_rule2:
                 # Exclude based on whichever rule was triggered

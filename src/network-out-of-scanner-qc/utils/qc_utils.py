@@ -496,10 +496,11 @@ def preprocess_rt_tail_cutoff(df: pd.DataFrame, subject_id: str | None = None, s
     """
     if 'trial_id' not in df.columns or 'rt' not in df.columns:
         # Still calculate proportion of blank trials
-        if 'rt' in df.columns:
+        if 'rt' in df.columns and 'trial_id' in df.columns:
             df['rt'] = pd.to_numeric(df['rt'], errors='coerce').fillna(-1)
-            if len(df) > 0:
-                proportion_blank = (df['rt'] == -1).sum() / len(df)
+            test_trials = df[df['trial_id'] == 'test_trial']
+            if len(test_trials) > 0:
+                proportion_blank = (test_trials['rt'] == -1).sum() / len(test_trials)
             else:
                 proportion_blank = 0.0
         else:
@@ -514,33 +515,22 @@ def preprocess_rt_tail_cutoff(df: pd.DataFrame, subject_id: str | None = None, s
     if not valid_mask_all.any():
         # No valid responses at all; nothing to trim specially here
         # Calculate proportion of blank trials
-        if 'trial_id' in df.columns:
-            test_trials = df[df['trial_id'] == 'test_trial']
-            if len(test_trials) > 0:
-                proportion_blank = 1.0  # All are blank
-            else:
-                proportion_blank = 0.0
+        test_trials = df[df['trial_id'] == 'test_trial']
+        if len(test_trials) > 0:
+            proportion_blank = (test_trials['rt'] == -1).sum() / len(test_trials)
         else:
-            proportion_blank = 1.0  # All are blank
+            proportion_blank = 0.0
         return df, None, False, proportion_blank
 
     last_valid_idx = valid_mask_all[valid_mask_all].index[-1]
     if last_valid_idx == df.index[-1]:
         # Already ends with a valid response; no trailing -1 segment
         # Still calculate proportion of blank trials
-        if 'trial_id' in df.columns:
-            test_trials = df[df['trial_id'] == 'test_trial']
-            if len(test_trials) > 0:
-                blank_trials = (test_trials['rt'] == -1).sum()
-                proportion_blank = blank_trials / len(test_trials)
-            else:
-                proportion_blank = 0.0
+        test_trials = df[df['trial_id'] == 'test_trial']
+        if len(test_trials) > 0:
+            proportion_blank = (test_trials['rt'] == -1).sum() / len(test_trials)
         else:
-            if len(df) > 0:
-                blank_trials = (df['rt'] == -1).sum()
-                proportion_blank = blank_trials / len(df)
-            else:
-                proportion_blank = 0.0
+            proportion_blank = 0.0
         return df, None, False, proportion_blank
 
     # Verify that ALL rows after last_valid_idx are indeed -1
@@ -548,42 +538,31 @@ def preprocess_rt_tail_cutoff(df: pd.DataFrame, subject_id: str | None = None, s
     if not tail_all_minus1:
         # Mixed tail; do not trim
         # Still calculate proportion of blank trials
-        if 'trial_id' in df.columns:
-            test_trials = df[df['trial_id'] == 'test_trial']
-            if len(test_trials) > 0:
-                blank_trials = (test_trials['rt'] == -1).sum()
-                proportion_blank = blank_trials / len(test_trials)
-            else:
-                proportion_blank = 0.0
+        test_trials = df[df['trial_id'] == 'test_trial']
+        if len(test_trials) > 0:
+            proportion_blank = (test_trials['rt'] == -1).sum() / len(test_trials)
         else:
-            if len(df) > 0:
-                blank_trials = (df['rt'] == -1).sum()
-                proportion_blank = blank_trials / len(df)
-            else:
-                proportion_blank = 0.0
+            proportion_blank = 0.0
         return df, None, False, proportion_blank
 
     # Additional guard: require that the last last_n_test_trials test_trial RTs are -1
-    if 'trial_id' in df.columns:
-        df_test_end = df[df['trial_id'] == 'test_trial']
-        if len(df_test_end) < last_n_test_trials:
-            # Not enough trailing test trials to be confident; do not trim
-            # Still calculate proportion of blank trials
-            if len(df_test_end) > 0:
-                blank_trials = (df_test_end['rt'] == -1).sum()
-                proportion_blank = blank_trials / len(df_test_end)
-            else:
-                proportion_blank = 0.0
-            return df, None, False, proportion_blank
-        if not (pd.to_numeric(df_test_end['rt'].tail(last_n_test_trials), errors='coerce').fillna(-1) == -1).all():
-            # Do not trim unless the final last_n_test_trials test trials are all -1
-            # Still calculate proportion of blank trials
-            if len(df_test_end) > 0:
-                blank_trials = (df_test_end['rt'] == -1).sum()
-                proportion_blank = blank_trials / len(df_test_end)
-            else:
-                proportion_blank = 0.0
-            return df, None, False, proportion_blank
+    df_test_end = df[df['trial_id'] == 'test_trial']
+    if len(df_test_end) < last_n_test_trials:
+        # Not enough trailing test trials to be confident; do not trim
+        # Still calculate proportion of blank trials
+        if len(df_test_end) > 0:
+            proportion_blank = (df_test_end['rt'] == -1).sum() / len(df_test_end)
+        else:
+            proportion_blank = 0.0
+        return df, None, False, proportion_blank
+    if not (pd.to_numeric(df_test_end['rt'].tail(last_n_test_trials), errors='coerce').fillna(-1) == -1).all():
+        # Do not trim unless the final last_n_test_trials test trials are all -1
+        # Still calculate proportion of blank trials
+        if len(df_test_end) > 0:
+            proportion_blank = (df_test_end['rt'] == -1).sum() / len(df_test_end)
+        else:
+            proportion_blank = 0.0
+        return df, None, False, proportion_blank
 
     # Trim to include up to and including last_valid_idx
     cutoff_iloc = df.index.get_loc(last_valid_idx)
@@ -595,20 +574,11 @@ def preprocess_rt_tail_cutoff(df: pd.DataFrame, subject_id: str | None = None, s
     cutoff_before_halfway = cutoff_pos < halfway
     
     # Calculate proportion of blank trials (rt == -1) in original dataframe
-    if 'trial_id' in df.columns:
-        test_trials = df[df['trial_id'] == 'test_trial']
-        if len(test_trials) > 0:
-            blank_trials = (test_trials['rt'] == -1).sum()
-            proportion_blank = blank_trials / len(test_trials)
-        else:
-            proportion_blank = 0.0
+    test_trials = df[df['trial_id'] == 'test_trial']
+    if len(test_trials) > 0:
+        proportion_blank = (test_trials['rt'] == -1).sum() / len(test_trials)
     else:
-        # If no trial_id, check all rows
-        if len(df) > 0:
-            blank_trials = (df['rt'] == -1).sum()
-            proportion_blank = blank_trials / len(df)
-        else:
-            proportion_blank = 0.0
+        proportion_blank = 0.0
 
     return df_trimmed, cutoff_pos, cutoff_before_halfway, proportion_blank
 
