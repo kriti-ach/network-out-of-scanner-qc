@@ -21,7 +21,19 @@ from utils.globals import (
     OMISSION_RATE_THRESHOLD,
     NOGO_STOP_SUCCESS_MIN,
     SUMMARY_ROWS,
-    GO_RT_THRESHOLD_DUAL_TASK
+    GO_RT_THRESHOLD_DUAL_TASK,
+    NBACK_1BACK_MATCH_ACC_COMBINED_THRESHOLD_1,
+    NBACK_1BACK_MISMATCH_ACC_COMBINED_THRESHOLD_1,
+    NBACK_1BACK_MATCH_ACC_COMBINED_THRESHOLD_2,
+    NBACK_1BACK_MISMATCH_ACC_COMBINED_THRESHOLD_2,
+    NBACK_2BACK_MATCH_ACC_COMBINED_THRESHOLD_1,
+    NBACK_2BACK_MISMATCH_ACC_COMBINED_THRESHOLD_1,
+    NBACK_2BACK_MATCH_ACC_COMBINED_THRESHOLD_2,
+    NBACK_2BACK_MISMATCH_ACC_COMBINED_THRESHOLD_2,
+    GONOGO_GO_ACC_THRESHOLD_1,
+    GONOGO_NOGO_ACC_THRESHOLD_1,
+    GONOGO_GO_ACC_THRESHOLD_2,
+    GONOGO_NOGO_ACC_THRESHOLD_2
 )
 from utils.qc_utils import sort_subject_ids, is_dual_task
 
@@ -184,27 +196,55 @@ def check_go_nogo_exclusion_criteria(task_name, task_csv, exclusion_df):
         nogo_acc_cols = [col for col in task_csv.columns if 'nogo' in col and 'acc' in col]
         go_omission_rate_cols = [col for col in task_csv.columns if 'go' in col and 'omission_rate' in col and 'nogo' not in col]
 
-        # If go accuracy < threshold AND nogo accuracy < threshold, then exclude
-        # Only check when the prefix (before go_acc/nogo_acc) matches
-        for col_name_go in go_acc_cols:
-            for col_name_nogo in nogo_acc_cols:
-                # Extract prefix before 'go_acc' and 'nogo_acc'
-                go_prefix = col_name_go.replace('go_acc', '')
-                nogo_prefix = col_name_nogo.replace('nogo_acc', '')
-                
-                # Only proceed if prefixes match
-                if go_prefix == nogo_prefix:
-                    go_acc_value = row[col_name_go]
-                    nogo_acc_value = row[col_name_nogo]
-                    # Check go accuracy threshold only if this is a go_nogo single task 
-                    if task_name == "go_nogo_single_task_network":
-                        if compare_to_threshold('go_acc', go_acc_value, GO_ACC_THRESHOLD_GO_NOGO):
-                            exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name_go, go_acc_value, GO_ACC_THRESHOLD_GO_NOGO, session)
-                        if compare_to_threshold('nogo_acc', nogo_acc_value, NOGO_ACC_THRESHOLD_GO_NOGO):
-                            exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name_nogo, nogo_acc_value, NOGO_ACC_THRESHOLD_GO_NOGO, session)
+        if is_fmri:
+            # For fMRI: use new exclusion criteria
+            # Check when the prefix (before go_acc/nogo_acc) matches
+            for col_name_go in go_acc_cols:
+                for col_name_nogo in nogo_acc_cols:
+                    # Extract prefix before 'go_acc' and 'nogo_acc'
+                    go_prefix = col_name_go.replace('go_acc', '')
+                    nogo_prefix = col_name_nogo.replace('nogo_acc', '')
+                    
+                    # Only proceed if prefixes match
+                    if go_prefix == nogo_prefix:
+                        go_acc_value = row[col_name_go]
+                        nogo_acc_value = row[col_name_nogo]
+                        
+                        # New exclusion criteria: (go < 0.8 AND nogo < 0.2) OR (go < 0.55 AND nogo < 0.55)
+                        if pd.notna(go_acc_value) and pd.notna(nogo_acc_value):
+                            exclude_rule1 = (go_acc_value < GONOGO_GO_ACC_THRESHOLD_1) and (nogo_acc_value < GONOGO_NOGO_ACC_THRESHOLD_1)
+                            exclude_rule2 = (go_acc_value < GONOGO_GO_ACC_THRESHOLD_2) and (nogo_acc_value < GONOGO_NOGO_ACC_THRESHOLD_2)
+                            
+                            if exclude_rule1 or exclude_rule2:
+                                # Exclude based on whichever rule was triggered
+                                if exclude_rule1:
+                                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, f'{col_name_go}_fmri_rule1', go_acc_value, GONOGO_GO_ACC_THRESHOLD_1, session)
+                                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, f'{col_name_nogo}_fmri_rule1', nogo_acc_value, GONOGO_NOGO_ACC_THRESHOLD_1, session)
+                                if exclude_rule2:
+                                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, f'{col_name_go}_fmri_rule2', go_acc_value, GONOGO_GO_ACC_THRESHOLD_2, session)
+                                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, f'{col_name_nogo}_fmri_rule2', nogo_acc_value, GONOGO_NOGO_ACC_THRESHOLD_2, session)
+        else:
+            # For out-of-scanner: use existing criteria
+            # If go accuracy < threshold AND nogo accuracy < threshold, then exclude
+            # Only check when the prefix (before go_acc/nogo_acc) matches
+            for col_name_go in go_acc_cols:
+                for col_name_nogo in nogo_acc_cols:
+                    # Extract prefix before 'go_acc' and 'nogo_acc'
+                    go_prefix = col_name_go.replace('go_acc', '')
+                    nogo_prefix = col_name_nogo.replace('nogo_acc', '')
+                    
+                    # Only proceed if prefixes match
+                    if go_prefix == nogo_prefix:
+                        go_acc_value = row[col_name_go]
+                        nogo_acc_value = row[col_name_nogo]
+                        # Check go accuracy threshold only if this is a go_nogo single task 
+                        if task_name == "go_nogo_single_task_network":
+                            if compare_to_threshold('go_acc', go_acc_value, GO_ACC_THRESHOLD_GO_NOGO):
+                                exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name_go, go_acc_value, GO_ACC_THRESHOLD_GO_NOGO, session)
+                            if compare_to_threshold('nogo_acc', nogo_acc_value, NOGO_ACC_THRESHOLD_GO_NOGO):
+                                exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name_nogo, nogo_acc_value, NOGO_ACC_THRESHOLD_GO_NOGO, session)
 
-        # Check go_omission_rate columns - skip exclusion for fMRI (will be flagged instead)
-        if not is_fmri:
+            # Check go_omission_rate columns
             for col_name in go_omission_rate_cols:
                 value = row[col_name]
                 if compare_to_threshold('go_omission_rate', value, GO_OMISSION_RATE_THRESHOLD):
@@ -226,16 +266,104 @@ def check_n_back_exclusion_criteria(task_name, task_csv, exclusion_df):
         session = row['session'] if 'session' in row.index else None
         for load in [1, 2, 3]:
             cols = nback_get_columns(task_csv, load)
-            exclusion_df = nback_flag_independent_accuracy(exclusion_df, subject_id, row, load, cols, session)
-            # Check omission rates - skip exclusion for fMRI (will be flagged instead)
-            if not is_fmri:
+            if is_fmri:
+                # For fMRI: move independent accuracy checks to flagged (handled in main.py)
+                # Only check new exclusion criteria
+                exclusion_df = nback_check_fmri_exclusion_criteria(exclusion_df, subject_id, row, load, task_csv, session)
+            else:
+                # For out-of-scanner: use existing criteria
+                exclusion_df = nback_flag_independent_accuracy(exclusion_df, subject_id, row, load, cols, session)
                 exclusion_df = nback_flag_omission_rates(exclusion_df, subject_id, row, load, cols, session)
         # Check combined accuracy thresholds (once per row, not per load)
-        exclusion_df = nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv, session)
+        if not is_fmri:
+            # For out-of-scanner: use existing combined criteria
+            exclusion_df = nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv, session)
+        # For fMRI: combined accuracy goes to flagged (handled in main.py)
 
     #sort by subject_id
     if len(exclusion_df) != 0:
         exclusion_df = sort_subject_ids(exclusion_df)
+    return exclusion_df
+
+def nback_check_fmri_exclusion_criteria(exclusion_df, subject_id, row, load, task_csv, session=None):
+    """
+    Check new fMRI exclusion criteria for n-back tasks.
+    
+    For 1-back and 2-back only:
+    - Rule 1: match < 0.2 AND mismatch < 0.8
+    - Rule 2: match < 0.55 AND mismatch < 0.55
+    
+    Exclude if either rule is met.
+    """
+    if load not in [1, 2]:
+        return exclusion_df
+    
+    load_str = f"{load}.0back"
+    mismatch_cols = [col for col in task_csv.columns if f'mismatch_{load_str}' in col and 'acc' in col and 'nogo' not in col and 'stop_fail' not in col]
+    match_cols = [col for col in task_csv.columns if f'match_{load_str}' in col and 'acc' in col and 'mismatch' not in col and 'nogo' not in col and 'stop_fail' not in col]
+    
+    mismatch_map = {}
+    for col in mismatch_cols:
+        prefix_with_underscore = f"mismatch_{load_str}_"
+        if prefix_with_underscore in col:
+            cond_suffix = suffix(col, prefix_with_underscore)
+        else:
+            prefix_no_underscore = f"mismatch_{load_str}"
+            cond_suffix = suffix(col, prefix_no_underscore)
+        mismatch_map[cond_suffix] = col
+    
+    match_map = {}
+    for col in match_cols:
+        prefix_with_underscore = f"match_{load_str}_"
+        if prefix_with_underscore in col:
+            cond_suffix = suffix(col, prefix_with_underscore)
+        else:
+            prefix_no_underscore = f"match_{load_str}"
+            cond_suffix = suffix(col, prefix_no_underscore)
+        match_map[cond_suffix] = col
+    
+    common_suffixes = set(mismatch_map.keys()) & set(match_map.keys())
+    
+    for cond_suffix in common_suffixes:
+        mismatch_col = mismatch_map[cond_suffix]
+        match_col = match_map[cond_suffix]
+        mismatch_val = row[mismatch_col]
+        match_val = row[match_col]
+        
+        if pd.notna(mismatch_val) and pd.notna(match_val):
+            # Get thresholds based on load
+            if load == 1:
+                match_thresh_1 = NBACK_1BACK_MATCH_ACC_COMBINED_THRESHOLD_1
+                mismatch_thresh_1 = NBACK_1BACK_MISMATCH_ACC_COMBINED_THRESHOLD_1
+                match_thresh_2 = NBACK_1BACK_MATCH_ACC_COMBINED_THRESHOLD_2
+                mismatch_thresh_2 = NBACK_1BACK_MISMATCH_ACC_COMBINED_THRESHOLD_2
+            else:  # load == 2
+                match_thresh_1 = NBACK_2BACK_MATCH_ACC_COMBINED_THRESHOLD_1
+                mismatch_thresh_1 = NBACK_2BACK_MISMATCH_ACC_COMBINED_THRESHOLD_1
+                match_thresh_2 = NBACK_2BACK_MATCH_ACC_COMBINED_THRESHOLD_2
+                mismatch_thresh_2 = NBACK_2BACK_MISMATCH_ACC_COMBINED_THRESHOLD_2
+            
+            # Check both rules
+            exclude_rule1 = (match_val < match_thresh_1) and (mismatch_val < mismatch_thresh_1)
+            exclude_rule2 = (match_val < match_thresh_2) and (mismatch_val < mismatch_thresh_2)
+            
+            if exclude_rule1 or exclude_rule2:
+                # Exclude based on whichever rule was triggered
+                if exclude_rule1:
+                    exclusion_df = append_exclusion_row(
+                        exclusion_df, subject_id, f'{mismatch_col}_fmri_rule1', mismatch_val, mismatch_thresh_1, session
+                    )
+                    exclusion_df = append_exclusion_row(
+                        exclusion_df, subject_id, f'{match_col}_fmri_rule1', match_val, match_thresh_1, session
+                    )
+                if exclude_rule2:
+                    exclusion_df = append_exclusion_row(
+                        exclusion_df, subject_id, f'{mismatch_col}_fmri_rule2', mismatch_val, mismatch_thresh_2, session
+                    )
+                    exclusion_df = append_exclusion_row(
+                        exclusion_df, subject_id, f'{match_col}_fmri_rule2', match_val, match_thresh_2, session
+                    )
+    
     return exclusion_df
 
 def nback_flag_combined_accuracy(exclusion_df, subject_id, row, task_csv, session=None):

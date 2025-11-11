@@ -157,29 +157,81 @@ for task in tasks:
     
     # For fMRI: add condition accuracies and omission rates to flagged data before exclusion check
     if cfg.is_fmri and 'session' in task_csv.columns:
-        from utils.globals import ACC_THRESHOLD, OMISSION_RATE_THRESHOLD, GO_OMISSION_RATE_THRESHOLD
-        from utils.exclusion_utils import append_exclusion_row, compare_to_threshold
+        from utils.globals import (
+            ACC_THRESHOLD, OMISSION_RATE_THRESHOLD, GO_OMISSION_RATE_THRESHOLD,
+            MATCH_THRESHOLD, MISMATCH_THRESHOLD, MATCH_COMBINED_THRESHOLD, MISMATCH_COMBINED_THRESHOLD,
+            GO_ACC_THRESHOLD_GO_NOGO, NOGO_ACC_THRESHOLD_GO_NOGO
+        )
+        from utils.exclusion_utils import append_exclusion_row, compare_to_threshold, nback_flag_combined_accuracy
         condition_acc_flags = pd.DataFrame({'subject_id': [], 'metric': [], 'metric_value': [], 'threshold': []})
         omission_rate_flags = pd.DataFrame({'subject_id': [], 'metric': [], 'metric_value': [], 'threshold': []})
         if 'session' not in condition_acc_flags.columns:
             condition_acc_flags.insert(1, 'session', pd.Series(dtype=str))
             omission_rate_flags.insert(1, 'session', pd.Series(dtype=str))
         
-        # Get all condition accuracy columns (exclude overall_acc, and for n-back tasks exclude match/mismatch which use their own thresholds)
+        # Get all condition accuracy columns (exclude overall_acc)
         acc_cols = [col for col in task_csv.columns if col.endswith('_acc') and col != 'overall_acc' and 'nogo' not in col and 'stop_fail' not in col]
-        # For n-back tasks, exclude match/mismatch accuracy columns (they're handled by n-back exclusion with MATCH_THRESHOLD/MISMATCH_THRESHOLD)
+        
+        # For n-back tasks: flag match/mismatch accuracy using their specific thresholds
+        nback_match_cols = []
+        nback_mismatch_cols = []
         if 'n_back' in task:
+            nback_match_cols = [col for col in task_csv.columns if 'match_' in col and 'acc' in col and 'mismatch' not in col and 'nogo' not in col and 'stop_fail' not in col]
+            nback_mismatch_cols = [col for col in task_csv.columns if 'mismatch_' in col and 'acc' in col and 'nogo' not in col and 'stop_fail' not in col]
+            # Remove match/mismatch from general acc_cols
             acc_cols = [col for col in acc_cols if 'match_' not in col and 'mismatch_' not in col]
+        
+        # For go_nogo tasks: flag go_acc and nogo_acc using their specific thresholds
+        go_nogo_go_acc_cols = []
+        go_nogo_nogo_acc_cols = []
+        if 'go_nogo' in task:
+            go_nogo_go_acc_cols = [col for col in task_csv.columns if 'go' in col and 'acc' in col and 'nogo' not in col]
+            go_nogo_nogo_acc_cols = [col for col in task_csv.columns if 'nogo' in col and 'acc' in col]
+            # Remove go/nogo from general acc_cols
+            acc_cols = [col for col in acc_cols if 'go_acc' not in col]
+        
         # Get all omission rate columns
         omission_rate_cols = [col for col in task_csv.columns if 'omission_rate' in col]
         
-        for index, row in task_csv.iterrows():
-            if index >= len(task_csv) - 4:  # Skip summary rows
+        for idx, (index, row) in enumerate(task_csv.iterrows()):
+            if idx >= len(task_csv) - 4:  # Skip summary rows
                 continue
             subject_id = row['subject_id']
             session = row['session'] if 'session' in row.index else None
             
-            # Flag condition accuracies
+            # Flag n-back match accuracy
+            for col_name in nback_match_cols:
+                value = row[col_name]
+                if pd.notna(value) and compare_to_threshold(col_name, value, MATCH_THRESHOLD):
+                    condition_acc_flags = append_exclusion_row(condition_acc_flags, subject_id, col_name, value, MATCH_THRESHOLD, session)
+            
+            # Flag n-back mismatch accuracy
+            for col_name in nback_mismatch_cols:
+                value = row[col_name]
+                if pd.notna(value) and compare_to_threshold(col_name, value, MISMATCH_THRESHOLD):
+                    condition_acc_flags = append_exclusion_row(condition_acc_flags, subject_id, col_name, value, MISMATCH_THRESHOLD, session)
+            
+            # Flag n-back combined accuracy (using existing combined thresholds)
+            if 'n_back' in task:
+                temp_exclusion_df = pd.DataFrame({'subject_id': [], 'metric': [], 'metric_value': [], 'threshold': []})
+                if 'session' not in temp_exclusion_df.columns:
+                    temp_exclusion_df.insert(1, 'session', pd.Series(dtype=str))
+                temp_exclusion_df = nback_flag_combined_accuracy(temp_exclusion_df, subject_id, row, task_csv, session)
+                if len(temp_exclusion_df) > 0:
+                    condition_acc_flags = pd.concat([condition_acc_flags, temp_exclusion_df], ignore_index=True)
+            
+            # Flag go_nogo accuracy
+            for col_name_go in go_nogo_go_acc_cols:
+                value = row[col_name_go]
+                if pd.notna(value) and compare_to_threshold('go_acc', value, GO_ACC_THRESHOLD_GO_NOGO):
+                    condition_acc_flags = append_exclusion_row(condition_acc_flags, subject_id, col_name_go, value, GO_ACC_THRESHOLD_GO_NOGO, session)
+            
+            for col_name_nogo in go_nogo_nogo_acc_cols:
+                value = row[col_name_nogo]
+                if pd.notna(value) and compare_to_threshold('nogo_acc', value, NOGO_ACC_THRESHOLD_GO_NOGO):
+                    condition_acc_flags = append_exclusion_row(condition_acc_flags, subject_id, col_name_nogo, value, NOGO_ACC_THRESHOLD_GO_NOGO, session)
+            
+            # Flag other condition accuracies
             for col_name in acc_cols:
                 value = row[col_name]
                 if pd.notna(value) and compare_to_threshold(col_name, value, ACC_THRESHOLD):
