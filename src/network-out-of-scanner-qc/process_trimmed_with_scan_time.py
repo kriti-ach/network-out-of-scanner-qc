@@ -47,7 +47,7 @@ def get_scan_time_from_bids(subject_id, session, task_name, bids_path):
         return None
     print(f"Subject path exists: {subject_path}")
     
-    session_path = subject_path / f'ses-{session}'
+    session_path = subject_path / f'{session}'
     if not session_path.exists():
         return None
     print(f"Session path exists: {session_path}")
