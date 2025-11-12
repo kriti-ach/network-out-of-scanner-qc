@@ -200,7 +200,7 @@ def process_trimmed_csvs():
     
     # Process validation BIDS
     print("\nProcessing validation BIDS...")
-    for subject_dir in VALIDATION_BIDS_PATH.glob('s*'):
+    for subject_dir in VALIDATION_BIDS_PATH.glob('sub-s*'):
         subject_id = subject_dir.name
         if not re.match(r"s\d{2,}", subject_id):
             continue

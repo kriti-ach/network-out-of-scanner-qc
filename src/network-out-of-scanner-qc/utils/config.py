@@ -36,7 +36,7 @@ def load_config() -> PathConfig:
     validation_bids_path = Path("/oak/stanford/groups/russpold/data/network_grant/validation_BIDS")
     
     # Discovery subjects
-    discovery_subjects = ['s03', 's10', 's19', 's29', 's43']
+    discovery_subjects = ['sub-s03', 'sub-s10', 'sub-s19', 'sub-s29', 'sub-s43']
     
     # Trimmed CSV output path
     trimmed_csv_output_path = Path("/oak/stanford/groups/russpold/data/network_grant/behavioral_data/behavior_cut_short")
