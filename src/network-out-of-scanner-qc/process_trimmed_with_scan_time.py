@@ -71,6 +71,7 @@ def get_scan_time_from_bids(subject_id, session, task_name, bids_path):
                         try:
                             nii = nib.load(str(nii_file))
                             n_vols = nii.shape[-1] if len(nii.shape) > 3 else 1
+                            print(f"Number of volumes: {n_vols}")
                             tr = float(data['RepetitionTime'])
                             duration = tr * n_vols
                             total_duration += duration
