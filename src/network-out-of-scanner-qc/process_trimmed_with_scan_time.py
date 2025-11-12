@@ -55,7 +55,7 @@ def get_scan_time_from_bids(subject_id, session, task_name, bids_path):
     
     # Look for JSON sidecar files (func, beh, etc.)
     print(f"Looking for JSON files in {session_path} for task {task_name}")
-    json_files = list(session_path.glob(f'**/**task-{task_name}*_echo-2.json'))
+    json_files = list(session_path.glob(f'**/*task-{task_name}*_echo-2.json'))
     print(f"Found {len(json_files)} JSON files in {session_path}")
     print(json_files)
     for json_file in json_files:
