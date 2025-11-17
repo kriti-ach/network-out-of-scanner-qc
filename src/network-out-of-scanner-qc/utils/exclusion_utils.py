@@ -15,7 +15,6 @@ from utils.globals import (
     MISMATCH_THRESHOLD,
     MISMATCH_COMBINED_THRESHOLD,
     MATCH_THRESHOLD,
-    MISMATCH_COMBINED_THRESHOLD,
     MATCH_COMBINED_THRESHOLD,
     ACC_THRESHOLD,
     OMISSION_RATE_THRESHOLD,
@@ -656,3 +655,104 @@ def create_combined_exclusions_csv(tasks, exclusions_output_path):
             summarized = summarized.sort_values(['subject_id', 'task_name']).reset_index(drop=True)
         
         summarized.to_csv(exclusions_output_path / 'summarized_exclusions.csv', index=False)
+
+
+def flag_fmri_condition_metrics(task_name, task_csv):
+    """
+    Flag condition accuracies and omission rates for fMRI tasks.
+    These are moved to flagged data instead of exclusion data.
+    
+    Args:
+        task_name (str): Name of the task
+        task_csv (pd.DataFrame): QC CSV DataFrame with session column
+        
+    Returns:
+        tuple: (condition_acc_flags_df, omission_rate_flags_df) - DataFrames with flagged metrics
+    """
+    condition_acc_flags = pd.DataFrame({'subject_id': [], 'metric': [], 'metric_value': [], 'threshold': []})
+    omission_rate_flags = pd.DataFrame({'subject_id': [], 'metric': [], 'metric_value': [], 'threshold': []})
+    if 'session' not in condition_acc_flags.columns:
+        condition_acc_flags.insert(1, 'session', pd.Series(dtype=str))
+        omission_rate_flags.insert(1, 'session', pd.Series(dtype=str))
+    
+    # Get all condition accuracy columns (exclude overall_acc)
+    acc_cols = [col for col in task_csv.columns if col.endswith('_acc') and col != 'overall_acc' and 'nogo' not in col and 'stop_fail' not in col]
+    
+    # For n-back tasks: flag match/mismatch accuracy using their specific thresholds
+    nback_match_cols = []
+    nback_mismatch_cols = []
+    if 'n_back' in task_name:
+        nback_match_cols = [col for col in task_csv.columns if 'match_' in col and 'acc' in col and 'mismatch' not in col and 'nogo' not in col and 'stop_fail' not in col]
+        nback_mismatch_cols = [col for col in task_csv.columns if 'mismatch_' in col and 'acc' in col and 'nogo' not in col and 'stop_fail' not in col]
+        # Remove match/mismatch from general acc_cols
+        acc_cols = [col for col in acc_cols if 'match_' not in col and 'mismatch_' not in col]
+    
+    # For go_nogo tasks: flag go_acc and nogo_acc using their specific thresholds
+    go_nogo_go_acc_cols = []
+    go_nogo_nogo_acc_cols = []
+    if 'go_nogo' in task_name:
+        go_nogo_go_acc_cols = [col for col in task_csv.columns if 'go' in col and 'acc' in col and 'nogo' not in col]
+        go_nogo_nogo_acc_cols = [col for col in task_csv.columns if 'nogo' in col and 'acc' in col]
+        # Remove go/nogo from general acc_cols
+        acc_cols = [col for col in acc_cols if 'go_acc' not in col]
+    
+    # Get all omission rate columns
+    omission_rate_cols = [col for col in task_csv.columns if 'omission_rate' in col]
+    
+    for idx, (index, row) in enumerate(task_csv.iterrows()):
+        if idx >= len(task_csv) - 4:  # Skip summary rows
+            continue
+        subject_id = row['subject_id']
+        session = row['session'] if 'session' in row.index else None
+        
+        # Flag n-back match accuracy
+        for col_name in nback_match_cols:
+            value = row[col_name]
+            if pd.notna(value) and compare_to_threshold(col_name, value, MATCH_THRESHOLD):
+                condition_acc_flags = append_exclusion_row(condition_acc_flags, subject_id, col_name, value, MATCH_THRESHOLD, session)
+        
+        # Flag n-back mismatch accuracy
+        for col_name in nback_mismatch_cols:
+            value = row[col_name]
+            if pd.notna(value) and compare_to_threshold(col_name, value, MISMATCH_THRESHOLD):
+                condition_acc_flags = append_exclusion_row(condition_acc_flags, subject_id, col_name, value, MISMATCH_THRESHOLD, session)
+        
+        # Flag n-back combined accuracy (using existing combined thresholds)
+        if 'n_back' in task_name:
+            temp_exclusion_df = pd.DataFrame({'subject_id': [], 'metric': [], 'metric_value': [], 'threshold': []})
+            if 'session' not in temp_exclusion_df.columns:
+                temp_exclusion_df.insert(1, 'session', pd.Series(dtype=str))
+            temp_exclusion_df = nback_flag_combined_accuracy(temp_exclusion_df, subject_id, row, task_csv, session)
+            if len(temp_exclusion_df) > 0:
+                condition_acc_flags = pd.concat([condition_acc_flags, temp_exclusion_df], ignore_index=True)
+        
+        # Flag go_nogo accuracy
+        for col_name_go in go_nogo_go_acc_cols:
+            value = row[col_name_go]
+            if pd.notna(value) and compare_to_threshold('go_acc', value, GO_ACC_THRESHOLD_GO_NOGO):
+                condition_acc_flags = append_exclusion_row(condition_acc_flags, subject_id, col_name_go, value, GO_ACC_THRESHOLD_GO_NOGO, session)
+        
+        for col_name_nogo in go_nogo_nogo_acc_cols:
+            value = row[col_name_nogo]
+            if pd.notna(value) and compare_to_threshold('nogo_acc', value, NOGO_ACC_THRESHOLD_GO_NOGO):
+                condition_acc_flags = append_exclusion_row(condition_acc_flags, subject_id, col_name_nogo, value, NOGO_ACC_THRESHOLD_GO_NOGO, session)
+        
+        # Flag other condition accuracies
+        for col_name in acc_cols:
+            value = row[col_name]
+            if pd.notna(value) and compare_to_threshold(col_name, value, ACC_THRESHOLD):
+                condition_acc_flags = append_exclusion_row(condition_acc_flags, subject_id, col_name, value, ACC_THRESHOLD, session)
+        
+        # Flag omission rates
+        for col_name in omission_rate_cols:
+            value = row[col_name]
+            if pd.notna(value):
+                # Use appropriate threshold based on column name
+                if 'go_omission_rate' in col_name:
+                    threshold = GO_OMISSION_RATE_THRESHOLD
+                else:
+                    threshold = OMISSION_RATE_THRESHOLD
+                if compare_to_threshold(col_name, value, threshold):
+                    omission_rate_flags = append_exclusion_row(omission_rate_flags, subject_id, col_name, value, threshold, session)
+    
+    return condition_acc_flags, omission_rate_flags

@@ -549,6 +549,8 @@ def update_qc_csv(output_path, task_name, subject_id, metrics, session=None):
         
         df = pd.concat([df, new_row], ignore_index=True)
         df = sort_subject_ids(df)
+        # Remove columns with 'new' in their name before saving
+        df = df.loc[:, ~df.columns.str.contains('new', case=False)]
         df.to_csv(qc_file, index=False)
     except FileNotFoundError:
         print(f"Warning: QC file {qc_file} not found")
