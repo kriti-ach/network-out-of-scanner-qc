@@ -654,42 +654,66 @@ def calculate_basic_metrics(df, mask_acc, cond_name, metrics_dict, cued_with_fla
     correct_col = 'correct' if cued_with_flanker_in_scanner else 'correct_trial'
     
     if cued_with_flanker_in_scanner:
-        # For cued+flanker: task_condition and cue_condition are on row N, but correct is on row N+1
-        # We need to map each condition row index to the correct value from the next row position
+        # For cued+flanker: task_condition and cue_condition are on row N, but correct/key_press/rt are on row N+1
+        # We need to map each condition row index to the values from the next row position
         idx_list = list(df.index)
         correct_series = pd.Series(index=df.index, dtype=float)
+        rt_series = pd.Series(index=df.index, dtype=float)
+        key_press_series = pd.Series(index=df.index, dtype=float)
         
-        # Map each index to the next row's correct value
+        # Map each index to the next row's values
         for i, current_idx in enumerate(idx_list):
             if i + 1 < len(idx_list):
                 next_idx = idx_list[i + 1]
                 correct_series.loc[current_idx] = df[correct_col].loc[next_idx]
+                if 'rt' in df.columns:
+                    rt_series.loc[current_idx] = df['rt'].loc[next_idx]
+                else:
+                    rt_series.loc[current_idx] = np.nan
+                if 'key_press' in df.columns:
+                    key_press_series.loc[current_idx] = df['key_press'].loc[next_idx]
+                else:
+                    key_press_series.loc[current_idx] = np.nan
             else:
                 correct_series.loc[current_idx] = np.nan
+                rt_series.loc[current_idx] = np.nan
+                key_press_series.loc[current_idx] = np.nan
         
         # Create masks using the shifted correct values
         correct_mask = correct_series == 1
-        mask_rt = mask_acc & correct_mask
-        # For accuracy, use the shifted correct values for the masked rows
+        mask_rt = mask_acc & correct_mask & (rt_series.notna()) & (rt_series > 0)
+        
+        # Calculate accuracy using shifted correct values
         acc_value = correct_series[mask_acc].mean() if mask_acc.sum() > 0 else np.nan
+        
+        # Calculate RT using shifted RT values
+        rt_value = rt_series[mask_rt].mean() if mask_rt.sum() > 0 else np.nan
+        
+        # Calculate omission rate using shifted key_press values
+        mask_omission = mask_acc & (key_press_series == -1)
+        total_num_trials = len(df[mask_acc])
+        omission_rate = calculate_omission_rate(df, mask_omission, total_num_trials)
+        
+        # Calculate commission rate using shifted key_press and correct values
+        mask_commission = mask_acc & (key_press_series != -1) & (~correct_mask)
+        commission_rate = calculate_commission_rate(df, mask_commission, total_num_trials)
     else:
         correct_mask = df[correct_col] == 1
         mask_rt = mask_acc & correct_mask
         # Use calculate_acc function which properly handles the correct column
         acc_value = calculate_acc(df, mask_acc)
-    
-    mask_omission = mask_acc & (df['key_press'] == -1) if 'key_press' in df.columns else pd.Series([False] * len(df))
-    # Commission: responded but incorrect (correct_mask == False means incorrect)
-    if cued_with_flanker_in_scanner:
+        rt_value = calculate_rt(df, mask_rt)
+        
+        mask_omission = mask_acc & (df['key_press'] == -1) if 'key_press' in df.columns else pd.Series([False] * len(df))
         mask_commission = mask_acc & (df['key_press'] != -1) & (~correct_mask) if 'key_press' in df.columns else pd.Series([False] * len(df))
-    else:
-        mask_commission = mask_acc & (df['key_press'] != -1) & (~correct_mask) if 'key_press' in df.columns else pd.Series([False] * len(df))
+        total_num_trials = len(df[mask_acc])
+        omission_rate = calculate_omission_rate(df, mask_omission, total_num_trials)
+        commission_rate = calculate_commission_rate(df, mask_commission, total_num_trials)
     
-    total_num_trials = len(df[mask_acc])
     metrics_dict[f'{cond_name}_acc'] = acc_value
-    metrics_dict[f'{cond_name}_rt'] = calculate_rt(df, mask_rt)
-    metrics_dict[f'{cond_name}_omission_rate'] = calculate_omission_rate(df, mask_omission, total_num_trials)
-    metrics_dict[f'{cond_name}_commission_rate'] = calculate_commission_rate(df, mask_commission, total_num_trials)
+    metrics_dict[f'{cond_name}_rt'] = rt_value
+    metrics_dict[f'{cond_name}_omission_rate'] = omission_rate
+    metrics_dict[f'{cond_name}_commission_rate'] = commission_rate
 
 def calculate_go_nogo_metrics(df, mask_acc, cond_name, metrics_dict, response_equality: bool = False):
     """
