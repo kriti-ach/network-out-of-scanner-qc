@@ -116,6 +116,7 @@ def append_exclusion_row(exclusion_df, subject_id, metric_name, metric_value, th
 def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
     # Detect if this is fMRI mode (has session column)
     is_fmri = 'session' in task_csv.columns
+    is_stop_dual = is_dual_task(task_name) and 'stop_signal' in task_name
     
     for index, row in task_csv.iterrows():
         #ignore the last 4 rows (summary rows)
@@ -124,23 +125,53 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
         subject_id = row['subject_id']
         session = row['session'] if 'session' in row.index else None
 
-        # Get actual column names for each metric type
-        stop_success_cols = [col for col in task_csv.columns if 'stop_success' in col]
-        go_rt_cols = [col for col in task_csv.columns if 'go_rt' in col]
-        go_acc_cols = [col for col in task_csv.columns if 'go_acc' in col]
-        go_omission_rate_cols = [col for col in task_csv.columns if 'go_omission_rate' in col]
-        stop_fail_rt_cols = [col for col in task_csv.columns if 'stop_fail_rt' in col]
+        # For in-scanner stop signal dual tasks: use overall metrics for exclusion
+        if is_fmri and is_stop_dual:
+            # Check overall_go_acc
+            if 'overall_go_acc' in task_csv.columns:
+                overall_go_acc = row['overall_go_acc']
+                if pd.notna(overall_go_acc) and compare_to_threshold('overall_go_acc', overall_go_acc, ACC_THRESHOLD):
+                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, 'overall_go_acc', overall_go_acc, ACC_THRESHOLD, session)
+            
+            # Check overall_go_rt
+            if 'overall_go_rt' in task_csv.columns:
+                overall_go_rt = row['overall_go_rt']
+                if pd.notna(overall_go_rt) and compare_to_threshold('overall_go_rt', overall_go_rt, GO_RT_THRESHOLD_FMRI):
+                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, 'overall_go_rt', overall_go_rt, GO_RT_THRESHOLD_FMRI, session)
+            
+            # Check overall_stop_success_min (low threshold)
+            if 'overall_stop_success_min' in task_csv.columns:
+                overall_stop_success_min = row['overall_stop_success_min']
+                if pd.notna(overall_stop_success_min) and compare_to_threshold('stop_success_low', overall_stop_success_min, STOP_SUCCESS_ACC_LOW_THRESHOLD):
+                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, 'overall_stop_success_min', overall_stop_success_min, STOP_SUCCESS_ACC_LOW_THRESHOLD, session)
+            
+            # Check overall_stop_success_max (high threshold)
+            if 'overall_stop_success_max' in task_csv.columns:
+                overall_stop_success_max = row['overall_stop_success_max']
+                if pd.notna(overall_stop_success_max) and compare_to_threshold('stop_success_high', overall_stop_success_max, STOP_SUCCESS_ACC_HIGH_THRESHOLD):
+                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, 'overall_stop_success_max', overall_stop_success_max, STOP_SUCCESS_ACC_HIGH_THRESHOLD, session)
+            
+            # Condition-specific criteria will be moved to flags (handled in main.py)
+        else:
+            # For out-of-scanner or single tasks: use existing logic
+            # Get actual column names for each metric type
+            stop_success_cols = [col for col in task_csv.columns if 'stop_success' in col]
+            go_rt_cols = [col for col in task_csv.columns if 'go_rt' in col]
+            go_acc_cols = [col for col in task_csv.columns if 'go_acc' in col]
+            go_omission_rate_cols = [col for col in task_csv.columns if 'go_omission_rate' in col]
+            stop_fail_rt_cols = [col for col in task_csv.columns if 'stop_fail_rt' in col]
+            
             # Check stop_success specifically for low and high thresholds
-        for col_name in stop_success_cols:
-            value = row[col_name]
-            if 'nogo' in col_name:
-                if compare_to_threshold('stop_success_low', value, NOGO_STOP_SUCCESS_MIN):
-                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, NOGO_STOP_SUCCESS_MIN, session)
-            else:
-                if compare_to_threshold('stop_success_low', value, STOP_SUCCESS_ACC_LOW_THRESHOLD):
-                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, STOP_SUCCESS_ACC_LOW_THRESHOLD, session)
-                if compare_to_threshold('stop_success_high', value, STOP_SUCCESS_ACC_HIGH_THRESHOLD):
-                    exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, STOP_SUCCESS_ACC_HIGH_THRESHOLD, session)
+            for col_name in stop_success_cols:
+                value = row[col_name]
+                if 'nogo' in col_name:
+                    if compare_to_threshold('stop_success_low', value, NOGO_STOP_SUCCESS_MIN):
+                        exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, NOGO_STOP_SUCCESS_MIN, session)
+                else:
+                    if compare_to_threshold('stop_success_low', value, STOP_SUCCESS_ACC_LOW_THRESHOLD):
+                        exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, STOP_SUCCESS_ACC_LOW_THRESHOLD, session)
+                    if compare_to_threshold('stop_success_high', value, STOP_SUCCESS_ACC_HIGH_THRESHOLD):
+                        exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, STOP_SUCCESS_ACC_HIGH_THRESHOLD, session)
 
             # Check go_rt columns - use fMRI threshold if in fMRI mode
             for col_name in go_rt_cols:
@@ -257,6 +288,7 @@ def check_go_nogo_exclusion_criteria(task_name, task_csv, exclusion_df):
 def check_n_back_exclusion_criteria(task_name, task_csv, exclusion_df):
     # Detect if this is fMRI mode (has session column)
     is_fmri = 'session' in task_csv.columns
+    is_nback_dual = is_dual_task(task_name) and 'n_back' in task_name
     
     for index, row in task_csv.iterrows():
         #ignore the last 4 rows (summary rows)
@@ -269,7 +301,12 @@ def check_n_back_exclusion_criteria(task_name, task_csv, exclusion_df):
             if is_fmri:
                 # For fMRI: move independent accuracy checks to flagged (handled in main.py)
                 # Only check new exclusion criteria
-                exclusion_df = nback_check_fmri_exclusion_criteria(exclusion_df, subject_id, row, load, task_csv, session)
+                if is_nback_dual:
+                    # For dual tasks: use overall match/mismatch metrics
+                    exclusion_df = nback_check_fmri_exclusion_criteria_dual(exclusion_df, subject_id, row, load, task_csv, session)
+                else:
+                    # For single tasks: use condition-specific criteria
+                    exclusion_df = nback_check_fmri_exclusion_criteria(exclusion_df, subject_id, row, load, task_csv, session)
             else:
                 # For out-of-scanner: use existing criteria
                 exclusion_df = nback_flag_independent_accuracy(exclusion_df, subject_id, row, load, cols, session)
@@ -287,11 +324,11 @@ def check_n_back_exclusion_criteria(task_name, task_csv, exclusion_df):
 
 def nback_check_fmri_exclusion_criteria(exclusion_df, subject_id, row, load, task_csv, session=None):
     """
-    Check new fMRI exclusion criteria for n-back tasks.
+    Check new fMRI exclusion criteria for n-back single tasks.
     
     For 1-back and 2-back only:
-    - Rule 1: match < 0.2 AND mismatch < 0.8
-    - Rule 2: match < 0.55 AND mismatch < 0.55
+    - Rule 1: match < 0.2 AND mismatch < 0.75
+    - Rule 2: match < 0.5 AND mismatch < 0.5
     
     Exclude if either rule is met.
     """
@@ -299,8 +336,8 @@ def nback_check_fmri_exclusion_criteria(exclusion_df, subject_id, row, load, tas
         return exclusion_df
     
     load_str = f"{load}.0back"
-    mismatch_cols = [col for col in task_csv.columns if f'mismatch_{load_str}' in col and 'acc' in col and 'nogo' not in col and 'stop_fail' not in col]
-    match_cols = [col for col in task_csv.columns if f'match_{load_str}' in col and 'acc' in col and 'mismatch' not in col and 'nogo' not in col and 'stop_fail' not in col]
+    mismatch_cols = [col for col in task_csv.columns if f'mismatch_{load_str}' in col and 'acc' in col and 'nogo' not in col and 'stop_fail' not in col and 'overall' not in col]
+    match_cols = [col for col in task_csv.columns if f'match_{load_str}' in col and 'acc' in col and 'mismatch' not in col and 'nogo' not in col and 'stop_fail' not in col and 'overall' not in col]
     
     mismatch_map = {}
     for col in mismatch_cols:
@@ -343,11 +380,11 @@ def nback_check_fmri_exclusion_criteria(exclusion_df, subject_id, row, load, tas
                 match_thresh_2 = NBACK_2BACK_MATCH_ACC_COMBINED_THRESHOLD_2
                 mismatch_thresh_2 = NBACK_2BACK_MISMATCH_ACC_COMBINED_THRESHOLD_2
             
-            # Check both rules
-            exclude_rule1 = (match_val <= match_thresh_1) or (mismatch_val <= mismatch_thresh_1)
-            exclude_rule2 = (match_val <= match_thresh_2) or (mismatch_val <= mismatch_thresh_2)
+            # Check both rules: (match < thresh1 AND mismatch < thresh1) OR (match < thresh2 AND mismatch < thresh2)
+            exclude_rule1 = (match_val <= match_thresh_1) and (mismatch_val <= mismatch_thresh_1)
+            exclude_rule2 = (match_val <= match_thresh_2) and (mismatch_val <= mismatch_thresh_2)
             
-            if exclude_rule1 and exclude_rule2:
+            if exclude_rule1 or exclude_rule2:
                 # Exclude based on whichever rule was triggered
                 if exclude_rule1:
                     exclusion_df = append_exclusion_row(
@@ -363,6 +400,66 @@ def nback_check_fmri_exclusion_criteria(exclusion_df, subject_id, row, load, tas
                     exclusion_df = append_exclusion_row(
                         exclusion_df, subject_id, f'{match_col}_fmri_rule2', match_val, match_thresh_2, session
                     )
+    
+    return exclusion_df
+
+def nback_check_fmri_exclusion_criteria_dual(exclusion_df, subject_id, row, load, task_csv, session=None):
+    """
+    Check new fMRI exclusion criteria for n-back dual tasks using overall match/mismatch metrics.
+    
+    For 1-back and 2-back only:
+    - Rule 1: overall_match < 0.2 AND overall_mismatch < 0.75
+    - Rule 2: overall_match < 0.5 AND overall_mismatch < 0.5
+    
+    Exclude if either rule is met.
+    """
+    if load not in [1, 2]:
+        return exclusion_df
+    
+    load_str = f"{load}.0back"
+    overall_match_col = f'overall_match_{load_str}_acc'
+    overall_mismatch_col = f'overall_mismatch_{load_str}_acc'
+    
+    # Check if overall columns exist
+    if overall_match_col not in task_csv.columns or overall_mismatch_col not in task_csv.columns:
+        return exclusion_df
+    
+    match_val = row[overall_match_col]
+    mismatch_val = row[overall_mismatch_col]
+    
+    if pd.notna(mismatch_val) and pd.notna(match_val):
+        # Get thresholds based on load
+        if load == 1:
+            match_thresh_1 = NBACK_1BACK_MATCH_ACC_COMBINED_THRESHOLD_1
+            mismatch_thresh_1 = NBACK_1BACK_MISMATCH_ACC_COMBINED_THRESHOLD_1
+            match_thresh_2 = NBACK_1BACK_MATCH_ACC_COMBINED_THRESHOLD_2
+            mismatch_thresh_2 = NBACK_1BACK_MISMATCH_ACC_COMBINED_THRESHOLD_2
+        else:  # load == 2
+            match_thresh_1 = NBACK_2BACK_MATCH_ACC_COMBINED_THRESHOLD_1
+            mismatch_thresh_1 = NBACK_2BACK_MISMATCH_ACC_COMBINED_THRESHOLD_1
+            match_thresh_2 = NBACK_2BACK_MATCH_ACC_COMBINED_THRESHOLD_2
+            mismatch_thresh_2 = NBACK_2BACK_MISMATCH_ACC_COMBINED_THRESHOLD_2
+        
+        # Check both rules: (match < thresh1 AND mismatch < thresh1) OR (match < thresh2 AND mismatch < thresh2)
+        exclude_rule1 = (match_val <= match_thresh_1) and (mismatch_val <= mismatch_thresh_1)
+        exclude_rule2 = (match_val <= match_thresh_2) and (mismatch_val <= mismatch_thresh_2)
+        
+        if exclude_rule1 or exclude_rule2:
+            # Exclude based on whichever rule was triggered
+            if exclude_rule1:
+                exclusion_df = append_exclusion_row(
+                    exclusion_df, subject_id, f'{overall_mismatch_col}_fmri_rule1', mismatch_val, mismatch_thresh_1, session
+                )
+                exclusion_df = append_exclusion_row(
+                    exclusion_df, subject_id, f'{overall_match_col}_fmri_rule1', match_val, match_thresh_1, session
+                )
+            if exclude_rule2:
+                exclusion_df = append_exclusion_row(
+                    exclusion_df, subject_id, f'{overall_mismatch_col}_fmri_rule2', mismatch_val, mismatch_thresh_2, session
+                )
+                exclusion_df = append_exclusion_row(
+                    exclusion_df, subject_id, f'{overall_match_col}_fmri_rule2', match_val, match_thresh_2, session
+                )
     
     return exclusion_df
 

@@ -943,6 +943,64 @@ def compute_n_back_metrics(df, condition_list, paired_task_col=None, paired_cond
                 {'1-back': '1_back_acc', '2-back': '2_back_acc'},
                 metrics
             )
+        
+        # Calculate overall match/mismatch metrics for in-scanner dual tasks (averaged across all paired task conditions)
+        if paired_task_col is not None and paired_conditions is not None and len(paired_conditions) > 0:
+            # For each load (1-back, 2-back), calculate overall match and mismatch accuracies
+            for load in [1, 2]:
+                load_str = f"{load}.0back"
+                match_acc_values = []
+                mismatch_acc_values = []
+                
+                # Collect all match and mismatch accuracies for this load across all paired conditions
+                for paired_cond in paired_conditions:
+                    # Try different naming patterns based on how condition was constructed
+                    paired_cond_lower = paired_cond.lower()
+                    
+                    # Pattern 1: match_1.0back_congruent_acc (with underscore)
+                    match_key1 = f"match_{load_str}_{paired_cond_lower}_acc"
+                    mismatch_key1 = f"mismatch_{load_str}_{paired_cond_lower}_acc"
+                    
+                    # Pattern 2: match_1.0backcongruent_acc (without underscore)
+                    match_key2 = f"match_{load_str}{paired_cond_lower}_acc"
+                    mismatch_key2 = f"mismatch_{load_str}{paired_cond_lower}_acc"
+                    
+                    # Pattern 3: For shapematching, might have n_back prefix
+                    if shapematching:
+                        match_key3 = f"n_back_match_{load_str}_{paired_cond_lower}_acc"
+                        mismatch_key3 = f"n_back_mismatch_{load_str}_{paired_cond_lower}_acc"
+                    else:
+                        match_key3 = None
+                        mismatch_key3 = None
+                    
+                    # Try each pattern
+                    match_key = None
+                    mismatch_key = None
+                    for key in [match_key1, match_key2, match_key3]:
+                        if key and key in metrics and pd.notna(metrics[key]):
+                            match_key = key
+                            break
+                    for key in [mismatch_key1, mismatch_key2, mismatch_key3]:
+                        if key and key in metrics and pd.notna(metrics[key]):
+                            mismatch_key = key
+                            break
+                    
+                    if match_key:
+                        match_acc_values.append(metrics[match_key])
+                    if mismatch_key:
+                        mismatch_acc_values.append(metrics[mismatch_key])
+                
+                # Calculate overall metrics
+                if match_acc_values:
+                    metrics[f'overall_match_{load_str}_acc'] = np.mean(match_acc_values)
+                else:
+                    metrics[f'overall_match_{load_str}_acc'] = np.nan
+                
+                if mismatch_acc_values:
+                    metrics[f'overall_mismatch_{load_str}_acc'] = np.mean(mismatch_acc_values)
+                else:
+                    metrics[f'overall_mismatch_{load_str}_acc'] = np.nan
+    
     return metrics
 
 def compute_fmri_cued_spatial_task_switching_metrics(df, condition_list):
@@ -1782,6 +1840,42 @@ def compute_stop_signal_metrics(df, dual_task = False, paired_task_col=None, pai
         ssd_stats = calculate_stop_signal_ssd_stats(df)
         metrics.update(ssd_stats)
         # Note: SSRT is now calculated per condition in calculate_dual_stop_signal_condition_metrics
+        
+        # Calculate overall metrics for in-scanner dual tasks (averaged across all conditions)
+        if paired_conditions is not None and len(paired_conditions) > 0:
+            go_acc_values = []
+            go_rt_values = []
+            stop_success_values = []
+            
+            for paired_cond in paired_conditions:
+                go_acc_key = f'{paired_cond}_go_acc'
+                go_rt_key = f'{paired_cond}_go_rt'
+                stop_success_key = f'{paired_cond}_stop_success'
+                
+                if go_acc_key in metrics and pd.notna(metrics[go_acc_key]):
+                    go_acc_values.append(metrics[go_acc_key])
+                if go_rt_key in metrics and pd.notna(metrics[go_rt_key]):
+                    go_rt_values.append(metrics[go_rt_key])
+                if stop_success_key in metrics and pd.notna(metrics[stop_success_key]):
+                    stop_success_values.append(metrics[stop_success_key])
+            
+            # Calculate overall metrics
+            if go_acc_values:
+                metrics['overall_go_acc'] = np.mean(go_acc_values)
+            else:
+                metrics['overall_go_acc'] = np.nan
+            
+            if go_rt_values:
+                metrics['overall_go_rt'] = np.mean(go_rt_values)
+            else:
+                metrics['overall_go_rt'] = np.nan
+            
+            if stop_success_values:
+                metrics['overall_stop_success_min'] = np.min(stop_success_values)
+                metrics['overall_stop_success_max'] = np.max(stop_success_values)
+            else:
+                metrics['overall_stop_success_min'] = np.nan
+                metrics['overall_stop_success_max'] = np.nan
         
         return metrics
 
