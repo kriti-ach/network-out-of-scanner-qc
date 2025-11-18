@@ -3,8 +3,7 @@ import numpy as np
 import pytest
 from utils.qc_utils import (
     compute_cued_task_switching_metrics,
-    compute_cued_spatial_task_switching_metrics
-)
+) 
 
 class TestCuedTaskSwitchingMetrics:
     """Test cued task switching metric calculation functions."""
@@ -164,56 +163,6 @@ class TestCuedTaskSwitchingMetrics:
         # Should still calculate metrics for valid conditions
         assert 'tstay_cstay_acc' in metrics
         assert 'tstay_cswitch_acc' in metrics
-        
-    def test_compute_cued_spatial_task_switching_metrics(self):
-        """Test cued task switching with spatial task switching metrics."""
-        metrics = compute_cued_spatial_task_switching_metrics(
-            self.df_spatial, self.spatial_conditions
-        )
-        
-        # Should calculate metrics for each condition
-        for condition in self.spatial_conditions:
-            assert f'{condition}_acc' in metrics
-            assert f'{condition}_rt' in metrics
-            assert f'{condition}_omission_rate' in metrics
-            assert f'{condition}_commission_rate' in metrics
-            
-        # Check specific values for cuedtstaycstay_spatialtstaycstay (1 correct out of 1 trial)
-        assert metrics['cuedtstaycstay_spatialtstaycstay_acc'] == 1.0
-        assert metrics['cuedtstaycstay_spatialtstaycstay_rt'] == pytest.approx(0.5)
-        
-    def test_compute_cued_spatial_task_switching_metrics_complex_parsing(self):
-        """Test complex condition parsing for cued + spatial task switching."""
-        # Test with more complex condition names
-        complex_conditions = [
-            'cuedtstaycstay_spatialtstaycstay',
-            'cuedtswitchcswitch_spatialtswitchcswitch'
-        ]
-        
-        metrics = compute_cued_spatial_task_switching_metrics(
-            self.df_spatial, complex_conditions
-        )
-        
-        # Should parse and calculate metrics correctly
-        for condition in complex_conditions:
-            assert f'{condition}_acc' in metrics
-            assert f'{condition}_rt' in metrics
-            
-    def test_compute_cued_spatial_task_switching_metrics_parsing_errors(self):
-        """Test error handling for malformed condition names."""
-        # Test with malformed condition names
-        malformed_conditions = [
-            'invalid_condition',
-            'cuedtstaycstay_invalid',
-            'cued_invalid_spatialtstaycstay'
-        ]
-        
-        metrics = compute_cued_spatial_task_switching_metrics(
-            self.df_spatial, malformed_conditions
-        )
-        
-        # Should handle errors gracefully and skip malformed conditions
-        assert len(metrics) == 0
         
     def test_condition_filtering(self):
         """Test filtering of invalid conditions."""

@@ -590,7 +590,8 @@ def remove_some_flags_for_exclusion(task_name, exclusion_df):
 
     #Remove rows in stop+nback where metric contains stop_success but not collapsed
     if 'stop_signal' in task_name and 'n_back' in task_name:
-        exclusion_df = exclusion_df[~exclusion_df['metric'].str.contains('stop_success', na=False) & ~exclusion_df['metric'].str.contains('collapsed', na=False)]
+        # Keep rows that either don't contain 'stop_success' OR contain 'collapsed'
+        exclusion_df = exclusion_df[(~exclusion_df['metric'].str.contains('stop_success', na=False)) | (exclusion_df['metric'].str.contains('collapsed', na=False))]
     
     return exclusion_df
 

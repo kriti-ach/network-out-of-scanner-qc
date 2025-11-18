@@ -101,6 +101,8 @@ network-behavior-qc/
 │           ├── test_normalize_flanker_conditions.py
 │           ├── test_stop_signal_metrics.py
 │           └── test_violations_utils.py
+│           └── test_exclusion_utils.py
+│           └── test_trimmed_behavior_utils.py
 ├── pyproject.toml                     # Project dependencies and metadata
 ├── setup_env.sh                       # Environment setup script
 └── README.md

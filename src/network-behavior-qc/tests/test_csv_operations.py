@@ -1,6 +1,5 @@
 import pandas as pd
-from utils.qc_utils import initialize_qc_csvs, get_task_columns, update_qc_csv
-from utils.globals import SINGLE_TASKS_OUT_OF_SCANNER
+from utils.qc_utils import initialize_qc_csvs, update_qc_csv
 from pathlib import Path
 import tempfile
 
