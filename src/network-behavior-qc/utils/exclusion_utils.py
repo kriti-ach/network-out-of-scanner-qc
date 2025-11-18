@@ -7,7 +7,8 @@ import numpy as np
 from utils.globals import (
     STOP_SUCCESS_ACC_LOW_THRESHOLD,
     STOP_SUCCESS_ACC_HIGH_THRESHOLD,
-    GO_RT_THRESHOLD,
+    GO_RT_THRESHOLD_OUT_OF_SCANNER,
+    GO_RT_THRESHOLD_OUT_OF_SCANNER_DUAL_TASK,
     GO_RT_THRESHOLD_FMRI,
     GO_RT_THRESHOLD_FMRI_DUAL_TASK,
     GO_ACC_THRESHOLD_GO_NOGO,
@@ -21,7 +22,6 @@ from utils.globals import (
     OMISSION_RATE_THRESHOLD,
     NOGO_STOP_SUCCESS_MIN,
     SUMMARY_ROWS,
-    GO_RT_THRESHOLD_DUAL_TASK,
     NBACK_1BACK_MATCH_ACC_COMBINED_THRESHOLD_1,
     NBACK_1BACK_MISMATCH_ACC_COMBINED_THRESHOLD_1,
     NBACK_1BACK_MATCH_ACC_COMBINED_THRESHOLD_2,
@@ -177,9 +177,9 @@ def check_stop_signal_exclusion_criteria(task_name, task_csv, exclusion_df):
             for col_name in go_rt_cols:
                 value = row[col_name]
                 if is_fmri:
-                    rt_threshold = GO_RT_THRESHOLD_FMRI if not is_dual_task(task_name) else GO_RT_THRESHOLD_FMRI_DUAL_TASK
+                    rt_threshold = GO_RT_THRESHOLD_FMRI if not is_stop_dual else GO_RT_THRESHOLD_FMRI_DUAL_TASK
                 else:
-                    rt_threshold = GO_RT_THRESHOLD if not is_dual_task(task_name) else GO_RT_THRESHOLD_DUAL_TASK
+                    rt_threshold = GO_RT_THRESHOLD_OUT_OF_SCANNER if not is_stop_dual else GO_RT_THRESHOLD_OUT_OF_SCANNER_DUAL_TASK
                 if compare_to_threshold('go_rt', value, rt_threshold):
                     exclusion_df = append_exclusion_row(exclusion_df, subject_id, col_name, value, rt_threshold, session)
 
